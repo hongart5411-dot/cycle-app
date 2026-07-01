@@ -1,128 +1,116 @@
-# cycleAPP — Backend
+# cycleAPP 🚴
 
-Backend API for **cycleAPP**, a personal single-user cycling-computer web app.
-One Node.js + Express server hosts both the web pages and a JSON API backed by a
-Supabase Postgres database.
+A personal, single-user **cycling computer** as a web app — pair BLE power / heart‑rate
+sensors, watch live ride metrics on a handlebar phone mount, record the ride, and export
+a **TCX** file for Strava. Backed by a small Express + Supabase Postgres API.
 
-## Stack
+## Live
 
-- Node.js + Express
-- node-postgres (`pg`) → Supabase Postgres (transaction-mode pooler, port 6543)
-- dotenv for configuration
+| URL | What |
+| --- | --- |
+| **https://hongart5411-dot.github.io/cycle-app/** | Marketing **landing** page — static, GitHub Pages |
+| https://cycle-2hzispfm0-rada12s-projects.vercel.app/ | Landing on Vercel (full stack) |
+| https://cycle-2hzispfm0-rada12s-projects.vercel.app/app | The **riding app** (needs the API) |
 
-## Prerequisites
+> GitHub Pages serves the **static landing only**. The riding app's cloud sync and the
+> live `/api/stats` strip need the backend, which runs on Vercel (serverless). With no
+> backend reachable the landing degrades gracefully to its built‑in animated demo.
 
-- Node.js (tested on v24.x) and npm
-- A Supabase Postgres database. The connection string lives in `.env` as
-  `DATABASE_URL` (see `.env.example`). **`.env` is gitignored — never commit it.**
+## What's in here
 
-## Setup & run
+- **`index.html`** — Marketing landing page. Self‑contained vanilla HTML/CSS/JS with a live
+  animated demo of the ride screen. Optionally paints real aggregate totals from
+  `/api/stats`; when there is no backend (e.g. on GitHub Pages) it silently keeps the demo.
+- **`app.html`** — The actual riding web app: Web Bluetooth sensors, live ride screens, ride
+  recording, TCX export, ride history and settings. Syncs to the backend, with a local mock
+  fallback when offline or on an unsupported browser.
+- **`server.js`** — Express + `pg` backend. Serves the pages and a JSON API
+  (`/api/rides | profile | prefs | stats | health`) over a Supabase Postgres database.
+- **`schema.sql`** — Database schema (also applied automatically at server boot).
+- **`cycleAPP.md`** — Original build spec. The app was first specced as a Flutter iOS app;
+  this repo is the web implementation of that spec.
+
+## Project structure
+
+```
+.
+├── index.html      # landing page  → deployed to GitHub Pages
+├── app.html        # riding web app (Web Bluetooth, TCX export)
+├── server.js       # Express + pg API + static host
+├── schema.sql      # Postgres schema
+├── vercel.json     # Vercel routing: /api → function, /app → app.html, / → index.html
+├── .env.example    # env template (real .env is gitignored)
+├── package.json
+├── cycleAPP.md     # original build spec
+└── .nojekyll       # serve Pages files verbatim (no Jekyll)
+```
+
+## Riding app features
+
+- **BLE sensors (Web Bluetooth)** — cycling power + cadence (e.g. Favero Assioma; Cycling
+  Power Service `0x1818` / `0x2A63`) and heart rate (Heart Rate Service `0x180D` / `0x2A37`).
+  Falls back to a mock/demo stream when no hardware is present.
+- **Live ride screen** — big, high‑contrast numbers for power, speed, cadence, heart rate,
+  gradient, distance and elapsed time; built to be readable on a bike mount in daylight.
+- **Recording → TCX** — trackpoints captured during the ride and exported as a
+  Strava‑compatible **TCX** file (watts, heart rate, cadence, altitude, distance).
+- **History & settings** — completed‑rides list, rider profile (weight, FTP, height, age…)
+  and preferences, all synced to the backend.
+
+## Local development
 
 ```bash
 npm install
-npm start
+npm start          # http://localhost:3000   (npm run dev for auto-reload)
 ```
 
-For development with auto-reload on file changes:
+Requires Node.js (tested on v24.x) and a Supabase Postgres `DATABASE_URL` in `.env`
+(see [`.env.example`](./.env.example)). On boot the server auto‑creates the tables
+(`CREATE TABLE IF NOT EXISTS`). If the database is unreachable the HTTP server still starts
+so the static pages serve, and `/api/health` reports `db:false`.
 
-```bash
-npm run dev
-```
+| URL | Serves |
+| --- | --- |
+| `http://localhost:3000/` | `index.html` (landing) |
+| `http://localhost:3000/app` | `app.html` (riding app) |
+| `http://localhost:3000/api/health` | API health probe |
 
-The server starts on port `3000` (override with `PORT` in `.env`). On boot it
-auto-creates the database tables (`CREATE TABLE IF NOT EXISTS`). If the database
-is unreachable, the HTTP server still starts so the static pages serve, and
-`/api/health` reports `db:false`.
+## Deployment
 
-## Deployment (Vercel)
+### Landing → GitHub Pages
+`index.html` is a static file at the repo root, published via GitHub Pages from the `main`
+branch (root). A [`.nojekyll`](./.nojekyll) file disables Jekyll so files are served
+verbatim. Live at **https://hongart5411-dot.github.io/cycle-app/**. Any push to `main`
+redeploys the site automatically.
 
-The app is deployed to Vercel and reachable over HTTPS (works on mobile / iPhone).
-
-**Live production URL:** https://cycle-2hzispfm0-rada12s-projects.vercel.app
-
-| URL                                                            | Serves                           |
-| ------------------------------------------------------------- | -------------------------------- |
-| https://cycle-2hzispfm0-rada12s-projects.vercel.app/          | `index.html` (marketing landing) |
-| https://cycle-2hzispfm0-rada12s-projects.vercel.app/app       | `app.html` (the riding app)      |
-| https://cycle-2hzispfm0-rada12s-projects.vercel.app/api/health | API health probe (`db:true`)     |
-
-How it works on Vercel:
-
-- `server.js` runs as a serverless function (`@vercel/node`). It already exports
-  the Express app (`module.exports = app`) and only calls `app.listen()` when run
-  directly (`require.main === module`), so importing it on Vercel does **not**
-  start a listener. The schema is ensured lazily on the first `/api/*` request
-  (there is no boot step on serverless).
-- `index.html` and `app.html` are served as static assets (`@vercel/static`).
-- Routing lives in [`vercel.json`](./vercel.json): `/api/*` → the function,
-  `/app` → `app.html`, `/` → `index.html`.
-- [`.vercelignore`](./.vercelignore) keeps `.env` (DB password), `node_modules`,
-  and local tooling dirs out of the upload.
-
-Configuration / deploy steps (from this folder; not a git repo, so deploy directly):
-
-```bash
-# 1. Link the folder to a project (folder name has a space/uppercase, so name it explicitly)
-npx vercel link --yes --project cycle-app
-
-# 2. Set DATABASE_URL for production AND preview (value piped via stdin, never echoed/committed)
-printf '%s' "<supabase-pooler-url>" | npx vercel env add DATABASE_URL production
-printf '%s' "<supabase-pooler-url>" | npx vercel env add DATABASE_URL preview
-
-# 3. Deploy to production
-npx vercel --prod --yes
-```
-
-`DATABASE_URL` is configured as a Vercel **Environment Variable** (encrypted) for
-both Production and Preview — it is never stored in `vercel.json` or any committed
-file. The value is the Supabase transaction-mode pooler URL (port 6543); SSL is
-handled in `server.js`.
-
-> **Public access note:** Vercel "Deployment Protection" (Vercel Authentication /
-> SSO) is **disabled** for this project so the `*.vercel.app` URL is reachable
-> without a Vercel login (required for use on a phone). If it ever gets re-enabled,
-> every URL 302-redirects to `vercel.com/sso-api`; turn it off under
-> *Project → Settings → Deployment Protection → Vercel Authentication*.
-
-## URLs
-
-| URL                              | Serves                          |
-| -------------------------------- | ------------------------------- |
-| http://localhost:3000/           | `index.html` (marketing landing) |
-| http://localhost:3000/app        | `app.html` (the riding app)     |
-| http://localhost:3000/app.html   | `app.html` (the riding app)     |
-| http://localhost:3000/api/health | API health probe                |
-
-Any other file in the project directory is served statically.
-
-## Database
-
-The schema is defined in [`schema.sql`](./schema.sql) and is also applied
-automatically at server boot. Single-user app:
-
-- `profile` and `prefs` are **singletons** (one row each, `id = 1`).
-- `rides` is a list of completed rides, each optionally carrying a (large) TCX XML blob.
-
-`.env` holds the Supabase `DATABASE_URL`. The password is never written to any
-file served to the client.
+### Full app + API → Vercel
+`server.js` runs as a serverless function (`@vercel/node`) — it exports the Express app and
+only calls `app.listen()` when run directly, so importing it on Vercel does **not** start a
+listener; the schema is ensured lazily on the first `/api/*` request. `index.html` and
+`app.html` are served as static assets, and routing lives in [`vercel.json`](./vercel.json)
+(`/api/*` → the function, `/app` → `app.html`, `/` → `index.html`).
+[`.vercelignore`](./.vercelignore) keeps `.env`, `node_modules` and local tooling out of the
+upload. `DATABASE_URL` is set as an **encrypted Vercel Environment Variable** (Production +
+Preview) — never stored in any committed file. Vercel "Deployment Protection" is disabled so
+the URL is reachable without a Vercel login (needed on a phone).
 
 ## API
 
-All endpoints return JSON. Numeric fields are coerced to real numbers (pg returns
-`NUMERIC` columns as strings). On failure a handler returns `500 { "error": "..." }`.
+All endpoints return JSON. Numeric fields are coerced to real numbers (pg returns `NUMERIC`
+columns as strings). On failure a handler returns `500 { "error": "..." }`.
 
-| Method | Path               | Description                                                                                  |
-| ------ | ------------------ | -------------------------------------------------------------------------------------------- |
-| GET    | `/api/health`      | `{ ok: true, db: true|false }` — `db` reflects a live `SELECT 1`.                             |
-| GET    | `/api/rides?limit=N` | Array of rides, newest first (`ORDER BY date DESC`). **Omits** the heavy `tcx` field. `limit` optional. |
-| GET    | `/api/rides/:id`   | Full ride **including** `tcx`. `404 { error }` if not found.                                  |
-| POST   | `/api/rides`       | Body is a ride; upsert by `id`. `400 { error }` if `id` missing. Returns the saved ride.      |
-| DELETE | `/api/rides/:id`   | `{ ok: true }` — idempotent (ok even if the ride did not exist).                              |
-| GET    | `/api/profile`     | Profile object. Returns defaults if no row yet.                                              |
-| PUT    | `/api/profile`     | Body is a profile; upsert singleton (`id = 1`). Returns the saved profile.                    |
-| GET    | `/api/prefs`       | Prefs object. Returns defaults if no row yet.                                                |
-| PUT    | `/api/prefs`       | Body is prefs; upsert singleton (`id = 1`). Returns the saved prefs.                          |
-| GET    | `/api/stats`       | Aggregate stats over all rides (all-zeros/nulls when there are no rides).                     |
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| GET | `/api/health` | `{ ok: true, db: true\|false }` — `db` reflects a live `SELECT 1`. |
+| GET | `/api/rides?limit=N` | Rides, newest first (`ORDER BY date DESC`). **Omits** the heavy `tcx` field. `limit` optional. |
+| GET | `/api/rides/:id` | Full ride **including** `tcx`. `404 { error }` if not found. |
+| POST | `/api/rides` | Body is a ride; upsert by `id`. `400 { error }` if `id` missing. Returns the saved ride. |
+| DELETE | `/api/rides/:id` | `{ ok: true }` — idempotent (ok even if the ride did not exist). |
+| GET | `/api/profile` | Profile object. Returns defaults if no row yet. |
+| PUT | `/api/profile` | Body is a profile; upsert singleton (`id = 1`). Returns the saved profile. |
+| GET | `/api/prefs` | Prefs object. Returns defaults if no row yet. |
+| PUT | `/api/prefs` | Body is prefs; upsert singleton (`id = 1`). Returns the saved prefs. |
+| GET | `/api/stats` | Aggregate stats over all rides (all‑zeros/nulls when there are no rides). |
 
 ### Data shapes (camelCase JSON)
 
@@ -148,9 +136,22 @@ All endpoints return JSON. Numeric fields are coerced to real numbers (pg return
 }
 ```
 
+## Database
+
+The schema is defined in [`schema.sql`](./schema.sql) and applied automatically at server
+boot. Single‑user app:
+
+- `profile` and `prefs` are **singletons** (one row each, `id = 1`).
+- `rides` is a list of completed rides, each optionally carrying a (large) TCX XML blob.
+
+The Supabase connection uses SSL and the transaction‑mode pooler (port 6543), so the server
+uses only plain parameterized queries (no session state / named prepared statements). The
+password lives only in `.env` and is never written to any file served to the client.
+
 ## Notes
 
-- The frontend (`index.html`, `app.html`) is maintained separately; this backend
-  never modifies those files.
-- The Supabase connection uses SSL and the transaction-mode pooler, so the server
-  uses only plain parameterized queries (no session state / named prepared statements).
+- **`.env` is gitignored — never commit it.** Only `.env.example` (placeholders) is tracked.
+- The landing stays public: with no/invalid API token the `/api/stats` call returns 401 and
+  the personal‑totals strip simply stays hidden, so private data isn't exposed to visitors.
+- **BLE requires a real device + a browser that supports Web Bluetooth** (Chrome/Edge over
+  HTTPS). Use demo/mock mode otherwise.
