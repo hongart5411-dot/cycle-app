@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<!-- cycleAPP — 실제 라이딩용 웹 앱 (단일 HTML, 빌드 없음).
+     센서: navigator.bluetooth 있으면 실제 BLE(Cycling Power / Heart Rate / CSC), 없으면 모의 데이터.
+     GPS: navigator.geolocation (실제). 기록: localStorage. 저장: 자체 목록 + TCX 파일 + 스트라바 공유.
+     설정: 몸무게/FTP/키/나이/성별. -->
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#0b0b0c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>cycleAPP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@600;700;800&family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0b0c; --surface:#161618; --surface2:#101012; --text:#fff; --muted:#8a8a8d; --line:#262628;
+    --accent:#2f6df6; --green:#16a34a; --red:#ef4444; --ui:'Inter','Noto Sans KR',sans-serif; --num:'Barlow','Noto Sans KR',sans-serif;
+    --safe-top:env(safe-area-inset-top); --safe-bottom:env(safe-area-inset-bottom);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; height:100%; overflow-x:hidden; max-width:100%;}
+  body{background:var(--bg); color:var(--text); font-family:var(--ui); overscroll-behavior:none;}
+  button{font-family:inherit; color:inherit; cursor:pointer;}
+  @keyframes ccspin{to{transform:rotate(360deg);}}
+  @keyframes ccpulse{0%,100%{opacity:.4;}50%{opacity:1;}}
+
+  #app{ min-height:100%; }
+  .screen{ width:100%; max-width:560px; margin:0 auto; padding:calc(14px + var(--safe-top)) 16px 96px; }
+  .topbar{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:18px; }
+  .brand{ display:flex; align-items:center; gap:8px; font-family:var(--num); font-weight:800; font-size:20px; }
+  .brand .logo{ width:26px; height:26px; border-radius:8px; background:var(--accent); display:flex; align-items:center; justify-content:center; }
+  .pill{ font-size:11px; font-weight:700; padding:5px 10px; border-radius:30px; border:1px solid var(--line); color:var(--muted); }
+  .pill.live{ color:var(--green); border-color:rgba(22,163,74,.4); }
+  .pill.sim{ color:#eab308; border-color:rgba(234,179,8,.4); }
+
+  h1.t{ font-family:var(--num); font-weight:800; font-size:30px; margin:0; }
+  .sub{ color:var(--muted); font-size:14px; margin-top:4px; line-height:1.5; }
+  .eyebrow{ font-size:12px; font-weight:700; letter-spacing:.12em; color:var(--accent); }
+
+  .card{ background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:16px; }
+  .card + .card{ margin-top:12px; }
+  .row{ display:flex; align-items:center; gap:12px; }
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; font-weight:600; font-size:15px; border:0; border-radius:30px; padding:0 20px; min-height:50px; }
+  .btn-primary{ background:var(--accent); color:#fff; } .btn-green{ background:var(--green); color:#fff; }
+  .btn-red{ background:var(--red); color:#fff; } .btn-ghost{ background:transparent; color:var(--text); border:1px solid var(--line); }
+  .btn-block{ width:100%; } .btn:disabled{ opacity:.5; }
+
+  /* sensor rows */
+  .srow{ display:flex; align-items:center; gap:12px; padding:13px 14px; border-radius:14px; background:var(--surface); border:1px solid var(--line); }
+  .srow.on{ background:rgba(22,163,74,.10); border-color:rgba(22,163,74,.45); }
+  .sicon{ width:42px; height:42px; border-radius:50%; background:#1f2023; display:flex; align-items:center; justify-content:center; flex:none; }
+  .sname{ font-size:15px; font-weight:600; } .sdev{ font-size:11px; color:var(--muted); margin-top:1px; }
+  .sval{ font-family:var(--num); font-weight:800; font-size:22px; line-height:1; }
+  .stag{ display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; }
+  .spin{ width:16px; height:16px; border-radius:50%; border:2px solid var(--accent); border-top-color:transparent; animation:ccspin .7s linear infinite; }
+
+  .toggle{ width:46px; height:28px; border-radius:30px; position:relative; flex:none; transition:background .15s; }
+  .toggle .knob{ position:absolute; top:3px; width:22px; height:22px; border-radius:50%; background:#fff; transition:left .16s ease; }
+
+  /* select grid */
+  .selgrid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+  .selcard{ background:var(--surface); border:2px solid var(--line); border-radius:16px; padding:8px; text-align:center; }
+  .selcard.on{ border-color:var(--accent); }
+  .selcard .nm{ font-size:13px; font-weight:700; margin-top:6px; } .selcard .ds{ font-size:11px; color:var(--muted); margin-top:1px; }
+
+  /* full-screen ride */
+  .ride{ position:fixed; inset:0; background:#000; z-index:30; display:flex; flex-direction:column; }
+  .ride-screen{ flex:1; position:relative; overflow:hidden; container-type:inline-size; }
+  .ride-screen > div{ height:100%; }
+  .ride-ctrl{ padding:12px 16px calc(12px + var(--safe-bottom)); background:#0b0b0c; border-top:1px solid var(--line); display:flex; gap:10px; align-items:center; }
+  .ride-ctrl .meta{ flex:1; min-width:0; } .ride-ctrl .meta .e{ font-family:var(--num); font-weight:800; font-size:22px; line-height:1; } .ride-ctrl .meta .l{ font-size:10px; color:var(--muted); letter-spacing:.1em; }
+  .pause-overlay{ position:absolute; inset:0; z-index:5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; text-align:center; padding:0 24px; background:rgba(0,0,0,.5); -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px); font-family:var(--num); font-weight:800; font-size:34px; color:#eab308; letter-spacing:.04em; }
+
+  /* settings form */
+  .field{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; border-bottom:1px solid var(--line); }
+  .field:last-child{ border-bottom:0; }
+  .field label{ font-size:15px; font-weight:600; } .field .hint{ font-size:11px; color:var(--muted); margin-top:2px; }
+  .field input, .field select{ width:120px; background:var(--surface2); color:var(--text); border:1px solid var(--line); border-radius:10px; padding:11px 12px; font-size:16px; font-family:var(--num); font-weight:700; text-align:right; }
+  .field select{ font-family:var(--ui); font-weight:600; font-size:15px; }
+  .seg{ display:flex; gap:6px; } .seg button{ padding:9px 14px; border-radius:10px; border:1px solid var(--line); background:var(--surface2); font-weight:600; font-size:14px; }
+  .seg button.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
+
+  /* history */
+  .stat3{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+  .stat3 > div{ background:var(--surface); padding:14px 12px; } .stat3 .n{ font-family:var(--num); font-weight:800; font-size:24px; } .stat3 .k{ font-size:11px; color:var(--muted); margin-top:2px; }
+  .ride-item{ display:flex; align-items:center; gap:12px; padding:14px; border:1px solid var(--line); border-radius:14px; background:var(--surface); }
+  .ride-item + .ride-item{ margin-top:10px; }
+  .badge{ display:inline-block; font-size:11px; font-weight:700; padding:3px 8px; border-radius:20px; }
+
+  /* bottom tabs */
+  .tabbar{ position:fixed; left:0; right:0; bottom:0; z-index:20; background:rgba(11,11,12,.92); -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); border-top:1px solid var(--line); display:flex; padding-bottom:var(--safe-bottom); }
+  .tabbar button{ flex:1; background:none; border:0; padding:9px 0 8px; display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--muted); font-size:11px; font-weight:600; }
+  .tabbar button.on{ color:var(--accent); }
+
+  /* modal */
+  .modal-bg{ position:fixed; inset:0; z-index:50; background:rgba(0,0,0,.6); display:flex; align-items:flex-end; justify-content:center; }
+  .modal{ width:100%; max-width:560px; background:var(--surface); border-radius:20px 20px 0 0; padding:20px 18px calc(20px + var(--safe-bottom)); border:1px solid var(--line); }
+  .grabber{ width:40px; height:4px; border-radius:4px; background:var(--line); margin:0 auto 14px; }
+  .kv{ display:flex; align-items:baseline; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--line); }
+  .kv:last-child{ border-bottom:0; } .kv .k{ color:var(--muted); font-size:14px; } .kv .v{ font-family:var(--num); font-weight:800; font-size:20px; }
+  .banner{ font-size:12px; line-height:1.5; color:#cfcfd2; background:var(--surface2); border:1px solid var(--line); border-radius:12px; padding:11px 13px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+"use strict";
+/* ===================== persistence ===================== */
+const LS = {
+  get(k, d){ try{ const v = localStorage.getItem('cycleapp.'+k); return v==null? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem('cycleapp.'+k, JSON.stringify(v)); }catch(e){} CloudSync.push(k, v); },
+  setLocalOnly(k, v){ try{ localStorage.setItem('cycleapp.'+k, JSON.stringify(v)); }catch(e){} },
+};
+/* ===================== cloud sync (Supabase via /api) ===================== */
+// Mirrors local data to the backend API. Fully fault-tolerant: if the server is
+// unreachable (e.g. app.html opened directly as a file), it disables itself and
+// the app keeps working localStorage-only.
+const API_BASE = '';                          // same origin when served by server.js
+const DEFAULTS = {
+  profile: { weight:83, ftp:277, height:183, age:49, sex:'M', maxHr:0 },
+  prefs:   { selectedScreen:'zone2', autoConnect:true, demo:false, autoPause:true },
+};
+const CloudSync = {
+  enabled: true,
+  // token resolution: URL (#token=/?token=) → localStorage → empty. The URL form
+  // lets you set it with one tap, then it's stripped from the address bar.
+  token: (function(){
+    try{
+      const m = (location.hash + location.search).match(/[#?&]token=([^&]+)/);
+      if(m){ const t = decodeURIComponent(m[1]); localStorage.setItem('cycleapp.apiToken', t);
+             history.replaceState(null, '', location.pathname); return t; }
+      return localStorage.getItem('cycleapp.apiToken') || '';
+    }catch(e){ return ''; }
+  })(),
+  setToken(t){ this.token = (t||'').trim();
+    try{ this.token ? localStorage.setItem('cycleapp.apiToken', this.token) : localStorage.removeItem('cycleapp.apiToken'); }catch(e){} },
+  async req(method, path, body){
+    const headers = {};
+    if(body!=null) headers['Content-Type'] = 'application/json';
+    if(this.token) headers['Authorization'] = 'Bearer ' + this.token;
+    const r = await fetch(API_BASE + path, {
+      method, headers,
+      body: body!=null ? JSON.stringify(body) : undefined,
+      cache: 'no-store',
+    });
+    if(r.status===401){ const e = new Error('unauthorized'); e.code = 401; throw e; }
+    if(!r.ok) throw new Error(method+' '+path+' -> '+r.status);
+    return r.status===204 ? null : r.json();
+  },
+  push(k, v){                                 // singleton keys mirror on every change
+    if(!this.enabled) return;
+    if(k==='profile') this.req('PUT','/api/profile', v).catch(()=>{});
+    else if(k==='prefs') this.req('PUT','/api/prefs', v).catch(()=>{});
+    // 'rides' syncs per-item via saveRide/deleteRide (no bulk endpoint).
+  },
+  saveRide(ride){ if(this.enabled) this.req('POST','/api/rides', ride).catch(()=>{}); },
+  deleteRide(id){ if(this.enabled) this.req('DELETE','/api/rides/'+encodeURIComponent(id)).catch(()=>{}); },
+};
+const profile = Object.assign({ weight:83, ftp:277, height:183, age:49, sex:'M', maxHr:0 }, LS.get('profile', {}));
+function maxHrOf(){ return profile.maxHr && profile.maxHr>120 ? profile.maxHr : (220 - profile.age); }
+const prefs = Object.assign({ selectedScreen:'zone2', autoConnect:true, demo:false, autoPause:true }, LS.get('prefs', {}));
+let rides = LS.get('rides', []);
+
+/* ===================== app state ===================== */
+const BLE_OK = (typeof navigator!=='undefined') && !!navigator.bluetooth;
+const ui = { tab:'ride', step:'sensors' };          // tab: ride|history|settings ; step: sensors|select
+const sensors = {                                    // live sensor state
+  power:{ name:'파워 미터', svc:'cycling_power', status:'idle', device:null, value:null, cadence:null },
+  hr:{ name:'심박 센서', svc:'heart_rate', status:'idle', device:null, value:null },
+  cadence:{ name:'케이던스', svc:'cycling_speed_and_cadence', status:'idle', device:null, value:null },
+};
+let bleSupported = BLE_OK;
+const gps = { watchId:null, last:null, ok:false };
+
+/* live merged values + sim that always runs to keep previews/demo alive */
+const sim = {
+  speed:28, power:200, cadence:86, hr:140, grade:1.2, target:30,
+  histPower:Array.from({length:48},(_,i)=>190+70*Math.sin(i/3)), histHr:Array.from({length:48},(_,i)=>140+12*Math.sin(i/6)),
+  distToTop:1480, climbTotal:2400, climbGrade:7.2,
+};
+let climbBarsCache=null;
+const live = { power:0, hr:0, cadence:0, speed:0, grade:0 };
+
+/* recording */
+const rec = {
+  active:false, paused:false, autoPaused:false, pausedMs:0, freezeStart:0, lowTicks:0, startMs:0, secs:0, dist:0, lastAlt:null, ascent:0,
+  maxSpeed:0, maxPower:0, sumPower:0, nPower:0, sumHr:0, nHr:0, n:0,
+  lapIdx:1, lapSecs:0, lapDist:0, lapSumPower:0, lapN:0, lastLapSecs:0, lastLapAvg:0,
+  histPower:[], histHr:[], points:[], wakeLock:null,
+};
+let lastRideSummary = null;   // for post-save modal
+let detailRide = null;        // history detail modal
+
+/* ===================== helpers ===================== */
+function fmtTime(s){ s=Math.max(0,Math.floor(s)); const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),x=s%60,p=n=>String(n).padStart(2,'0'); return h>0?`${h}:${p(m)}:${p(x)}`:`${p(m)}:${p(x)}`; }
+function nowMs(){ return Date.now(); }
+function haversine(a,b){ const R=6371000,toR=x=>x*Math.PI/180; const dLat=toR(b.lat-a.lat),dLng=toR(b.lng-a.lng); const s=Math.sin(dLat/2)**2+Math.cos(toR(a.lat))*Math.cos(toR(b.lat))*Math.sin(dLng/2)**2; return 2*R*Math.asin(Math.min(1,Math.sqrt(s))); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ===================== zones (profile-relative) ===================== */
+function zonesHR(hr){
+  const mx=maxHrOf(); const th=[.6,.7,.8,.9].map(p=>mx*p);
+  const colors=['#3b82f6','#16a34a','#eab308','#f97316','#ef4444']; const names=['Z1','Z2','Z3','Z4','Z5'];
+  let idx=th.findIndex(t=>hr<t); if(idx<0)idx=4;
+  return { idx, color:colors[idx], name:names[idx],
+    bars:colors.map((c,i)=>({label:names[i],color:c,op:i===idx?'1':'0.28',h:i===idx?'100%':'50%',hflat:i===idx?'12px':'6px'})) };
+}
+function zonesPW(p){
+  const f=profile.ftp; const th=[.55,.75,.9,1.05].map(x=>f*x);
+  const colors=['#3b82f6','#16a34a','#eab308','#f97316','#ef4444']; const names=['Z1','Z2','Z3','Z4','Z5'];
+  let idx=th.findIndex(t=>p<t); if(idx<0)idx=4;
+  return { idx, color:colors[idx], name:names[idx],
+    bars:colors.map((c,i)=>({label:names[i],color:c,op:i===idx?'1':'0.28',h:i===idx?'100%':'50%',hflat:i===idx?'12px':'6px'})) };
+}
+
+/* ===================== view model (drives phone variants) ===================== */
+function viewState(){
+  // base = sim (keeps every field populated for any variant); override core fields when recording
+  const s = Object.assign({}, sim);
+  s.speed = live.speed; s.power = live.power; s.cadence = live.cadence; s.hr = live.hr; s.grade = live.grade;
+  if (rec.active){
+    s.secs = rec.secs; s.dist = rec.dist; s.maxSpeed = rec.maxSpeed; s.maxPower = rec.maxPower;
+    s.avgPowerV = rec.nPower? rec.sumPower/rec.nPower : live.power; s.avgHrV = rec.nHr? rec.sumHr/rec.nHr : live.hr;
+    s.histPower = rec.histPower.length? rec.histPower : sim.histPower; s.histHr = rec.histHr.length? rec.histHr : sim.histHr;
+    s.lapIdx = rec.lapIdx; s.lapSecs = rec.lapSecs; s.lapDist = rec.lapDist;
+    s.lapSumPower = rec.lapSumPower; s.lapN = rec.lapN; s.lastLapSecs = rec.lastLapSecs; s.lastLapAvg = rec.lastLapAvg;
+  } else {
+    s.secs = sim.secs!=null? sim.secs : 0;
+  }
+  return computeVals(s);
+}
+function computeVals(s){
+  const weight = profile.weight||83;
+  const avg = (s.secs>0 && s.dist!=null)? s.dist/(s.secs/3600) : (s.avgSpeed||0);
+  const f = Math.min((s.speed||0)/60,1); const cx=160,cy=160,R=130,th=Math.PI-f*Math.PI;
+  const hz=zonesHR(s.hr||0), pz=zonesPW(s.power||0);
+  const power3s = Math.round(((s.histPower||[s.power]).slice(-2).reduce((a,b)=>a+b,0))/Math.min(2,(s.histPower||[1]).length||1));
+  const wkg=((s.power||0)/weight).toFixed(1);
+  if(!climbBarsCache){ const g=[5,6,8,7,9,11,8,6,7,10,12,9,6,4],col=x=>x<5?'#19c37d':x<7?'#ffd23f':x<10?'#ff8a3d':'#ff3b30'; climbBarsCache=g.map(x=>({h:(28+x*6).toFixed(0),color:col(x)})); }
+  const vam=Math.max(0,Math.round((s.speed||0)*10*(s.climbGrade||7))); const elevRem=Math.round((s.distToTop||1480)*(s.climbGrade||7)/100);
+  const climbMarker=(100*(1-(s.distToTop||1480)/(s.climbTotal||2400))).toFixed(1);
+  const lapAvg=Math.round((s.lapSumPower||0)/Math.max(1,s.lapN||1));
+  const distToTurn=80+((Math.floor(s.secs||0))%18)*25; const turns=['우회전','좌회전','직진 유지','합류'];
+  const avgP = s.avgPowerV!=null? s.avgPowerV : (s.power||0); const avgH = s.avgHrV!=null? s.avgHrV : (s.hr||0);
+  return {
+    speedDec:(s.speed||0).toFixed(1), powerTxt:Math.round(s.power||0), cadenceTxt:Math.round(s.cadence||0), hrTxt:Math.round(s.hr||0),
+    gradeTxt:((s.grade||0)>=0?'+':'')+(s.grade||0).toFixed(1), distTxt2:(s.dist||0).toFixed(2), timeTxt:fmtTime(s.secs||0),
+    avgSpeedTxt:avg.toFixed(1), maxSpeedTxt:(s.maxSpeed||s.speed||0).toFixed(1),
+    avgPowerTxt:Math.round(avgP), maxPowerTxt:Math.round(s.maxPower||s.power||0), avgHrTxt:Math.round(avgH),
+    power3sTxt:power3s, wkgTxt:wkg, npTxt:Math.round(avgP*1.05),
+    hrZoneColor:hz.color, hrZoneName:hz.name, hrZones:hz.bars, hrZoneIdx:hz.idx+1,
+    pwZones:pz.bars, pwZoneIdx:pz.idx+1,
+    mpx1:(cx+(R-22)*Math.cos(th)).toFixed(1), mpy1:(cy-(R-22)*Math.sin(th)).toFixed(1),
+    mpx2:(cx+(R+6)*Math.cos(th)).toFixed(1), mpy2:(cy-(R+6)*Math.sin(th)).toFixed(1),
+    lapIdx:s.lapIdx||1, lapTimeTxt:fmtTime(s.lapSecs||0), lastLapTxt:fmtTime(s.lastLapSecs||0),
+    lapAvgTxt:lapAvg, lapNpTxt:Math.round(lapAvg*1.05), lapDistTxt:(s.lapDist||0).toFixed(2),
+    climbCat:'Cat 2', climbGradeTxt:(s.climbGrade||7).toFixed(1), vamTxt:vam,
+    distToTopTxt:Math.round(s.distToTop||1480), elevRemTxt:elevRem, climbBars:climbBarsCache, climbMarker,
+    nextTurnTxt:turns[(s.lapIdx||1)%turns.length], distToTurnTxt:Math.round(distToTurn)+' m',
+    distToDestTxt:Math.max(0,42-(s.dist||0)).toFixed(1),
+  };
+}
+
+/* ===================== phone-screen variants (8) ===================== */
+function phoneInner(variant, v){
+  if (variant==='speed') return `<div style="height:100%; background:#0b0b0c; color:#fff; display:flex; flex-direction:column; padding:24px 0 0;">
+    <div style="display:flex; justify-content:space-between; padding:0 18px;"><div><div style="font-size:9px; font-weight:700; letter-spacing:.12em; color:#8a8a8d;">AVG</div><div style="font-family:var(--num); font-size:20px; font-weight:700; color:#ff8a3d;">${v.avgSpeedTxt}</div></div><div style="text-align:right;"><div style="font-size:9px; font-weight:700; letter-spacing:.12em; color:#8a8a8d;">MAX</div><div style="font-family:var(--num); font-size:20px; font-weight:700;">${v.maxSpeedTxt}</div></div></div>
+    <div style="flex:1; display:flex; align-items:center; justify-content:center; padding:6px 18px;"><div style="position:relative; width:100%; max-width:330px;"><svg viewBox="0 0 320 178" width="100%" style="display:block;"><path d="M30,160 A130,130 0 0 1 68.1,68.1" fill="none" stroke="#19c37d" stroke-width="15"></path><path d="M68.1,68.1 A130,130 0 0 1 160,30" fill="none" stroke="#ffd23f" stroke-width="15"></path><path d="M160,30 A130,130 0 0 1 251.9,68.1" fill="none" stroke="#ff8a3d" stroke-width="15"></path><path d="M251.9,68.1 A130,130 0 0 1 290,160" fill="none" stroke="#ff3b30" stroke-width="15"></path><line x1="${v.mpx1}" y1="${v.mpy1}" x2="${v.mpx2}" y2="${v.mpy2}" stroke="#fff" stroke-width="4" stroke-linecap="round"></line><circle cx="${v.mpx2}" cy="${v.mpy2}" r="5" fill="#ff8a3d"></circle></svg><div style="position:absolute; left:0; right:0; bottom:-6px; text-align:center;"><div style="font-family:var(--num); font-size:clamp(64px,22cqw,108px); font-weight:800; line-height:.76;">${v.speedDec}</div><div style="font-size:10px; font-weight:700; letter-spacing:.2em; color:#8a8a8d; margin-top:4px;">KM / H</div></div></div></div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:2px; background:#202329;"><div style="background:#101113; padding:16px;"><div style="font-size:10px; font-weight:700; color:#8a8a8d;">거리 · KM</div><div style="font-family:var(--num); font-size:34px; font-weight:800; line-height:1; margin-top:4px;">${v.distTxt2}</div></div><div style="background:#101113; padding:16px;"><div style="font-size:10px; font-weight:700; color:#8a8a8d;">파워 · W</div><div style="font-family:var(--num); font-size:34px; font-weight:800; line-height:1; margin-top:4px; color:#2f6df6;">${v.powerTxt}</div></div><div style="background:#101113; padding:16px;"><div style="font-size:10px; font-weight:700; color:#8a8a8d;">시간</div><div style="font-family:var(--num); font-size:30px; font-weight:800; line-height:1; margin-top:4px;">${v.timeTxt}</div></div><div style="background:#101113; padding:16px;"><div style="font-size:10px; font-weight:700; color:#8a8a8d;">평균 · KM/H</div><div style="font-family:var(--num); font-size:34px; font-weight:800; line-height:1; margin-top:4px; color:#ff8a3d;">${v.avgSpeedTxt}</div></div></div></div>`;
+  if (variant==='power') return `<div style="height:100%; background:#0f1011; color:#fff; display:flex; flex-direction:column; justify-content:space-between; padding:24px 16px 18px;">
+    <div><div style="display:flex; justify-content:space-between;"><span style="font-size:11px; font-weight:700; letter-spacing:.12em; color:#2f6df6;">POWER</span><span style="font-size:11px; color:#8a8a8d;">3초 ${v.power3sTxt} W</span></div><div style="display:flex; align-items:baseline; gap:8px; margin-top:4px;"><span style="font-family:var(--num); font-size:clamp(72px,26cqw,120px); font-weight:800; line-height:.78; color:#2f6df6;">${v.powerTxt}</span><span style="font-size:18px; font-weight:700; color:#8a8a8d;">W</span></div><div style="font-size:12px; color:#cfcfd2; margin-top:2px;">${v.wkgTxt} W/kg · NP ${v.npTxt} W · Z${v.pwZoneIdx}</div></div>
+    <div style="display:flex; gap:4px; align-items:flex-end;">${v.pwZones.map(z=>`<div style="flex:1; display:flex; flex-direction:column; align-items:center;"><div style="height:40px; width:100%; display:flex; align-items:flex-end;"><div style="width:100%; height:${z.h}; background:${z.color}; opacity:${z.op}; border-radius:3px;"></div></div><div style="font-size:9px; font-weight:700; color:${z.color}; opacity:${z.op}; margin-top:4px;">${z.label}</div></div>`).join('')}</div>
+    <div style="display:flex; align-items:center; justify-content:space-between; border-top:1px solid #232427; border-bottom:1px solid #232427; padding:14px 2px;"><span style="font-size:11px; font-weight:700; color:#8a8a8d;">속도 KM/H</span><span style="font-family:var(--num); font-size:52px; font-weight:800; line-height:.85;">${v.speedDec}</span></div>
+    <div style="display:flex;">${[['평균 W',v.avgPowerTxt],['최고 W',v.maxPowerTxt],['케이던스',v.cadenceTxt]].map(c=>`<div style="flex:1; text-align:center; padding:8px 0; border-right:1px solid #232427;"><div style="font-size:9px; font-weight:700; color:#8a8a8d;">${c[0]}</div><div style="font-family:var(--num); font-size:26px; font-weight:700;">${c[1]}</div></div>`).join('')}<div style="flex:1; text-align:center; padding:8px 0;"><div style="font-size:9px; font-weight:700; color:#8a8a8d;">심박</div><div style="font-family:var(--num); font-size:26px; font-weight:700; color:${v.hrZoneColor};">${v.hrTxt}</div></div></div></div>`;
+  if (variant==='zone2') return `<div style="height:100%; background:#0f1011; color:#fff; display:flex; flex-direction:column; justify-content:space-between; padding:24px 16px 16px;">
+    <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:11px; font-weight:700; color:#16a34a;">ZONE 2 · 유산소 지구력</span><span style="display:inline-flex; align-items:center; height:18px; padding:0 9px; border-radius:30px; background:#16a34a; color:#fff; font-size:9px; font-weight:700;">목표 Z2</span></div>
+    <div style="display:flex; align-items:baseline; gap:8px;"><span style="font-family:var(--num); font-size:clamp(60px,20cqw,92px); font-weight:800; line-height:.8; color:${v.hrZoneColor};">${v.hrTxt}</span><span style="font-size:14px; font-weight:700; color:#8a8a8d;">BPM</span><span style="margin-left:auto; font-size:15px; font-weight:800; color:${v.hrZoneColor};">내 존 · ${v.hrZoneName}</span></div>
+    <div style="display:flex; gap:4px; align-items:flex-end;">${v.hrZones.map(z=>`<div style="flex:1; display:flex; flex-direction:column; align-items:center;"><div style="height:48px; width:100%; display:flex; align-items:flex-end;"><div style="width:100%; height:${z.h}; background:${z.color}; opacity:${z.op}; border-radius:3px;"></div></div><div style="font-size:10px; font-weight:700; color:${z.color}; opacity:${z.op}; margin-top:5px;">${z.label}</div></div>`).join('')}</div>
+    <div style="padding-top:12px; border-top:1px solid #232427; display:flex; align-items:baseline; gap:8px;"><span style="font-size:10px; font-weight:700; color:#8a8a8d;">POWER</span><span style="font-family:var(--num); font-size:36px; font-weight:800; color:#2f6df6;">${v.powerTxt}</span><span style="font-size:11px; color:#8a8a8d;">W · ${v.wkgTxt} W/kg</span></div>
+    <div style="display:flex;">${[['평균 심박',v.avgHrTxt,'#ef4444'],['평균 파워',v.avgPowerTxt,''],['시간',v.timeTxt,'']].map((c,i,arr)=>`<div style="flex:1; text-align:center; padding:10px 0; ${i<arr.length-1?'border-right:1px solid #232427;':''}"><div style="font-size:9px; font-weight:700; color:#8a8a8d;">${c[0]}</div><div style="font-family:var(--num); font-size:20px; font-weight:700; color:${c[2]||'#fff'};">${c[1]}</div></div>`).join('')}</div></div>`;
+  if (variant==='trainer') return `<div style="height:100%; background:#0f1011; color:#fff; display:flex; flex-direction:column; justify-content:space-between; padding:24px 16px 16px;">
+    <div style="display:flex; justify-content:space-between;"><span style="font-size:11px; font-weight:700; color:#7c8cff;">INDOOR · 로라</span><span style="font-size:11px; color:#8a8a8d;">${v.timeTxt}</span></div>
+    <div style="display:flex; align-items:baseline; gap:8px;"><span style="font-family:var(--num); font-size:clamp(64px,22cqw,104px); font-weight:800; line-height:.8; color:#2f6df6;">${v.powerTxt}</span><span style="font-size:15px; font-weight:700; color:#8a8a8d;">W</span><span style="margin-left:auto; font-size:13px; font-weight:700; color:#cfcfd2;">${v.wkgTxt} W/kg</span></div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; border-top:1px solid #232427;">${[['속도 KM/H',v.speedDec],['케이던스',v.cadenceTxt],['심박',v.hrTxt],['거리 KM',v.distTxt2]].map((c,i)=>`<div style="padding:11px 8px; ${i%2===0?'border-right:1px solid #232427;':''} ${i<2?'border-bottom:1px solid #232427;':''}"><div style="font-size:9px; font-weight:700; color:#8a8a8d;">${c[0]}</div><div style="font-family:var(--num); font-size:26px; font-weight:700; ${c[0]==='심박'?'color:'+v.hrZoneColor+';':''}">${c[1]}</div></div>`).join('')}</div>
+    <div><div style="font-size:10px; font-weight:700; color:#8a8a8d; margin-bottom:6px;">심박 존 · ${v.hrZoneName}</div><div style="display:flex; gap:4px; align-items:flex-end;">${v.hrZones.map(z=>`<div style="flex:1; display:flex; flex-direction:column; align-items:center;"><div style="height:32px; width:100%; display:flex; align-items:flex-end;"><div style="width:100%; height:${z.h}; background:${z.color}; opacity:${z.op}; border-radius:3px;"></div></div><div style="font-size:9px; font-weight:700; color:${z.color}; opacity:${z.op}; margin-top:3px;">${z.label}</div></div>`).join('')}</div></div></div>`;
+  if (variant==='lap') return `<div style="height:100%; background:#0f1011; color:#fff; display:flex; flex-direction:column; padding:24px 16px 16px;">
+    <div style="display:flex; justify-content:space-between;"><span style="font-size:11px; font-weight:700; color:#8a8a8d;">LAP · 랩 ${v.lapIdx}</span><span style="font-size:11px; color:#8a8a8d;">AUTO 5 KM</span></div>
+    <div style="font-family:var(--num); font-size:clamp(56px,18cqw,80px); font-weight:800; line-height:.82; margin-top:6px;">${v.lapTimeTxt}</div><div style="font-size:10px; font-weight:700; letter-spacing:.14em; color:#8a8a8d;">랩 시간</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; margin-top:12px; border-top:1px solid #232427;">${[['랩 평균 W',v.lapAvgTxt],['랩 NP W',v.lapNpTxt],['직전 랩',v.lastLapTxt],['랩 거리',v.lapDistTxt],['현재 W',v.powerTxt],['케이던스',v.cadenceTxt],['속도',v.speedDec],['평균 KM/H',v.avgSpeedTxt]].map((c,i)=>`<div style="padding:10px 6px; ${i%2===0?'border-right:1px solid #232427;':''} ${i<6?'border-bottom:1px solid #232427;':''}"><div style="font-size:8px; font-weight:700; color:#8a8a8d;">${c[0]}</div><div style="font-family:var(--num); font-size:24px; font-weight:700; ${c[0]==='현재 W'?'color:#2f6df6;':''}">${c[1]}</div></div>`).join('')}</div>
+    <div style="margin-top:auto; background:#2f6df6; border-radius:30px; padding:11px 0; text-align:center; font-size:13px; font-weight:600;">랩 (자동 5km)</div></div>`;
+  if (variant==='climb') return `<div style="height:100%; background:#0f1011; color:#fff; display:flex; flex-direction:column; padding:24px 16px 16px;">
+    <div style="display:flex; justify-content:space-between;"><span style="font-size:11px; font-weight:700; color:#ff8a3d;">CLIMB · ${v.climbCat}</span><span style="font-size:11px; color:#8a8a8d;">정상까지 ${v.distToTopTxt} m</span></div>
+    <div style="display:flex; align-items:baseline; gap:6px; margin-top:6px;"><span style="font-family:var(--num); font-size:clamp(64px,22cqw,100px); font-weight:800; line-height:.78; color:#ff8a3d;">${v.climbGradeTxt}</span><span style="font-size:22px; font-weight:700; color:#ff8a3d;">%</span></div><div style="font-size:10px; font-weight:700; letter-spacing:.14em; color:#8a8a8d;">현재 경사</div>
+    <div style="display:flex; margin-top:12px; border-top:1px solid #232427; border-bottom:1px solid #232427;">${[['VAM',v.vamTxt],['남은 고도',v.elevRemTxt],['파워 W',v.powerTxt],['속도',v.speedDec]].map((c,i)=>`<div style="flex:1; padding:11px 4px; ${i<3?'border-right:1px solid #232427;':''}"><div style="font-size:8px; font-weight:700; color:#8a8a8d;">${c[0]}</div><div style="font-family:var(--num); font-size:21px; font-weight:700;">${c[1]}</div></div>`).join('')}</div>
+    <div style="position:relative; height:90px; margin-top:auto; display:flex; align-items:flex-end; gap:2px;">${v.climbBars.map(b=>`<div style="flex:1; height:${b.h}%; background:${b.color};"></div>`).join('')}<div style="position:absolute; top:-4px; bottom:0; left:${v.climbMarker}%; width:2px; background:#fff;"></div></div></div>`;
+  if (variant==='tour') return `<div style="height:100%; background:#11151a; color:#fff; display:flex; flex-direction:column; padding-top:18px;">
+    <div style="display:flex; align-items:center; gap:10px; padding:11px 16px; background:#0b0e12;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2f6df6" stroke-width="2.2"><path d="M9 18V8a3 3 0 013-3h5"></path><path d="M14 2l4 3-4 3"></path></svg><div><div style="font-family:var(--num); font-size:22px; font-weight:800; line-height:1;">${v.distToTurnTxt}</div><div style="font-size:10px; color:#8a8a8d;">후 ${v.nextTurnTxt}</div></div></div>
+    <div style="position:relative; overflow:hidden; background:#1a2026; flex:1; min-height:120px;"><svg width="100%" height="100%" viewBox="0 0 240 200" preserveAspectRatio="xMidYMid slice"><rect width="240" height="200" fill="#1a2026"></rect><line x1="-20" y1="60" x2="260" y2="110" stroke="#2b333b" stroke-width="10"></line><line x1="40" y1="-20" x2="120" y2="220" stroke="#2b333b" stroke-width="8"></line><path d="M120 200 L120 120 Q120 90 160 80 L200 72" fill="none" stroke="#2f6df6" stroke-width="7" stroke-linecap="round"></path><circle cx="120" cy="150" r="9" fill="#2f6df6" stroke="#fff" stroke-width="3"></circle></svg></div>
+    <div style="display:flex; flex-wrap:wrap; background:#0f1011;">${[['거리 KM',v.distTxt2],['남은 KM',v.distToDestTxt],['속도',v.speedDec],['시간',v.timeTxt],['평균 KM/H',v.avgSpeedTxt],['파워 W',v.powerTxt]].map((c,i)=>`<div style="width:50%; padding:11px 16px; ${i%2===0?'border-right:1px solid #20262d;':''} ${i<4?'border-bottom:1px solid #20262d;':''}"><div style="font-size:9px; font-weight:700; color:#8a8a8d;">${c[0]}</div><div style="font-family:var(--num); font-size:26px; font-weight:700; ${c[0]==='파워 W'?'color:#2f6df6;':''}">${c[1]}</div></div>`).join('')}</div></div>`;
+  /* race (default) */
+  return `<div style="height:100%; background:#0b0b0c; color:#fff; display:flex; flex-direction:column; padding:24px 18px;">
+    <div style="font-size:11px; font-weight:700; letter-spacing:.14em; color:#8a8a8d;">RACE · 미니멀</div>
+    <div style="flex:1; display:flex; flex-direction:column; justify-content:center; gap:6px;">
+      <div style="display:flex; align-items:baseline; gap:10px;"><span style="font-family:var(--num); font-size:clamp(70px,24cqw,120px); font-weight:800; line-height:.82; color:#2f6df6;">${v.powerTxt}</span><span style="font-size:15px; font-weight:700; color:#8a8a8d;">W</span></div>
+      <div style="height:1px; background:#242426; margin:6px 0;"></div>
+      <div style="display:flex; align-items:baseline; gap:10px;"><span style="font-family:var(--num); font-size:clamp(70px,24cqw,120px); font-weight:800; line-height:.82;">${v.speedDec}</span><span style="font-size:15px; font-weight:700; color:#8a8a8d;">KM/H</span></div>
+      <div style="height:1px; background:#242426; margin:6px 0;"></div>
+      <div style="display:flex; align-items:baseline; gap:10px;"><span style="font-family:var(--num); font-size:clamp(70px,24cqw,120px); font-weight:800; line-height:.82; color:${v.hrZoneColor};">${v.hrTxt}</span><span style="font-size:15px; font-weight:700; color:#8a8a8d;">BPM</span><span style="margin-left:auto; font-size:14px; font-weight:800; color:${v.hrZoneColor};">${v.hrZoneName}</span></div>
+    </div></div>`;
+}
+const SCREENS = [
+  ['speed','속도 중심','아크 게이지'], ['power','파워 중심','3초·W/kg·존'], ['zone2','존2 훈련','내 존 실시간'],
+  ['trainer','로라용','파워·케이던스·심박'], ['lap','랩 훈련','랩 파워·직전 랩'], ['climb','클라이밍','경사·VAM'],
+  ['tour','투어·내비','맵 + 데이터'], ['race','레이스','파워·속도·심박 크게'],
+];
+function thumb(variant){ // mini phone for select grid
+  return `<div style="width:100%; aspect-ratio:300/430; background:#08080a; border-radius:16px; padding:5px; overflow:hidden; container-type:inline-size;"><div style="position:relative; width:100%; height:100%; border-radius:12px; overflow:hidden;">${phoneInner(variant, viewState())}</div></div>`;
+}
+
+/* ===================== Web Bluetooth ===================== */
+function setSensor(kind, patch){ Object.assign(sensors[kind], patch); paintSensors(); }
+async function bleConnect(kind){
+  const cfg = sensors[kind];
+  if (!navigator.bluetooth){
+    if (prefs.demo){ mockConnect(kind); return; }         // demo mode: intentional simulation
+    alert('이 브라우저는 블루투스를 지원하지 않습니다 (아이폰 기본 Safari).\n\n실제 파워·심박 센서(예: Favero Assioma)를 쓰려면 Bluefy 같은 Web Bluetooth 브라우저로 이 페이지를 여세요.\n시뮬레이션으로만 시험하려면 아래 "데모(모의 데이터) 모드"를 켜세요.\n\nGPS(속도·거리·경로)는 지금도 실제로 기록됩니다.');
+    return;
+  }
+  try{
+    setSensor(kind,{status:'searching'});
+    const dev = await navigator.bluetooth.requestDevice({ filters:[{services:[cfg.svc]}], optionalServices:['battery_service'] });
+    setSensor(kind,{status:'connecting', device:dev});
+    dev.addEventListener('gattserverdisconnected', ()=>setSensor(kind,{status:'idle', value:null}));
+    const server = await dev.gatt.connect();
+    const svc = await server.getPrimaryService(cfg.svc);
+    if (kind==='power'){
+      const ch = await svc.getCharacteristic('cycling_power_measurement');
+      await ch.startNotifications(); ch.addEventListener('characteristicvaluechanged', e=>parsePower(e.target.value));
+    } else if (kind==='hr'){
+      const ch = await svc.getCharacteristic('heart_rate_measurement');
+      await ch.startNotifications(); ch.addEventListener('characteristicvaluechanged', e=>parseHR(e.target.value));
+    } else {
+      const ch = await svc.getCharacteristic('csc_measurement');
+      await ch.startNotifications(); ch.addEventListener('characteristicvaluechanged', e=>parseCSC(e.target.value));
+    }
+    setSensor(kind,{status:'connected', device:dev, name:dev.name||cfg.name});
+  }catch(err){ setSensor(kind,{status:'idle'}); if(err && err.name!=='NotFoundError') alert('연결 실패: '+(err.message||err)); }
+}
+let _crank={revs:null,time:null};
+function parsePower(dv){
+  const flags=dv.getUint16(0,true); const power=dv.getInt16(2,true); let off=4;
+  if(flags&0x01) off+=1; if(flags&0x04) off+=2; if(flags&0x10) off+=6;
+  let cad=sensors.power.cadence;
+  if(flags&0x20){ const revs=dv.getUint16(off,true), t=dv.getUint16(off+2,true);
+    if(_crank.revs!=null){ let dr=revs-_crank.revs; if(dr<0)dr+=65536; let dt=t-_crank.time; if(dt<0)dt+=65536; if(dt>0) cad=Math.round(dr/(dt/1024)*60); }
+    _crank.revs=revs; _crank.time=t; }
+  sensors.power.value=power; if(cad!=null) sensors.power.cadence=cad;
+}
+function parseHR(dv){ const f=dv.getUint8(0); sensors.hr.value = (f&1)? dv.getUint16(1,true) : dv.getUint8(1); }
+let _csc={revs:null,time:null};
+function parseCSC(dv){ const f=dv.getUint8(0); let off=1; if(f&0x01) off+=6;
+  if(f&0x02){ const revs=dv.getUint16(off,true), t=dv.getUint16(off+2,true);
+    if(_csc.revs!=null){ let dr=revs-_csc.revs; if(dr<0)dr+=65536; let dt=t-_csc.time; if(dt<0)dt+=65536; if(dt>0) sensors.cadence.value=Math.round(dr/(dt/1024)*60); }
+    _csc.revs=revs; _csc.time=t; } }
+/* mock connect (Safari / no BLE) */
+function mockConnect(kind){
+  setSensor(kind,{status:'searching'});
+  setTimeout(()=>setSensor(kind,{status:'connecting'}),700);
+  setTimeout(()=>setSensor(kind,{status:'connected', device:{mock:true}}),1500);
+}
+function disconnectSensor(kind){
+  const c=sensors[kind]; try{ if(c.device&&c.device.gatt&&c.device.gatt.connected) c.device.gatt.disconnect(); }catch(e){}
+  setSensor(kind,{status:'idle', device:null, value:null});
+}
+function toggleSensor(kind){ const st=sensors[kind].status; if(st==='idle') bleConnect(kind); else disconnectSensor(kind); }
+function runAutoConnect(){ ['power','hr','cadence'].forEach(k=>{ if(sensors[k].status==='idle') (navigator.bluetooth? null : mockConnect(k)); }); if(!navigator.bluetooth) return; /* real BLE requires a user gesture per device; do one */ }
+function connectedCount(){ return ['power','hr','cadence'].filter(k=>sensors[k].status==='connected').length; }
+
+/* ===================== GPS ===================== */
+function startGps(){
+  if(!navigator.geolocation){ gps.ok=false; return; }
+  gps.last=null;
+  gps.watchId = navigator.geolocation.watchPosition(pos=>{
+    gps.ok=true; const c=pos.coords; const p={lat:c.latitude,lng:c.longitude,alt:c.altitude,t:pos.timestamp,spd:c.speed};
+    if(rec.active && !rec.paused && !rec.autoPaused && gps.last){ const d=haversine(gps.last,p); if(d>0.6 && d<60) rec.dist+=d/1000; // km, noise gate
+      if(c.altitude!=null && rec.lastAlt!=null){ const da=c.altitude-rec.lastAlt; if(da>0&&da<8) rec.ascent+=da; } if(c.altitude!=null) rec.lastAlt=c.altitude; }
+    if(c.speed!=null && c.speed>=0) live.speed = c.speed*3.6; // m/s → km/h (real)
+    gps.last=p;
+  }, err=>{ gps.ok=false; }, { enableHighAccuracy:true, maximumAge:1000, timeout:8000 });
+}
+function stopGps(){ if(gps.watchId!=null){ navigator.geolocation.clearWatch(gps.watchId); gps.watchId=null; } }
+
+/* ===================== simulator (drives previews + demo data) ===================== */
+function simTick(){
+  const s=sim;
+  if(Math.random()<0.12) s.target=12+Math.random()*32;
+  s.speed=Math.max(0,Math.min(62, s.speed+(s.target-s.speed)*0.16+(Math.random()-0.5)*2.4));
+  s.grade=Math.max(-9,Math.min(13, s.grade+(Math.random()-0.5)*2.0));
+  s.power=Math.round(Math.max(0,Math.min(720, 90+s.speed*5.4+s.grade*9+(Math.random()-0.5)*70)));
+  s.cadence=s.speed>3?Math.max(50,Math.min(112,Math.round(72+(s.speed-26)*0.7+(Math.random()-0.5)*8))):0;
+  s.hr=Math.max(95,Math.min(186, s.hr+((108+s.power*0.13)-s.hr)*0.05+(Math.random()-0.5)*1.2));
+  s.distToTop=Math.max(0,s.distToTop-s.speed*0.4); if(s.distToTop<=0){ s.climbTotal=1400+Math.round(Math.random()*2400); s.distToTop=s.climbTotal; }
+  s.climbGrade=Math.max(3.5,Math.min(12,s.climbGrade+(Math.random()-0.5)*0.8));
+  s.histPower=s.histPower.slice(-47).concat(s.power); s.histHr=s.histHr.slice(-47).concat(s.hr);
+}
+
+/* which data feeds `live`: real sensors override; sim fills the rest (for preview/demo) */
+function refreshLive(){
+  const realRiding = rec.active && !prefs.demo;
+  live.power   = sensors.power.status==='connected' && sensors.power.value!=null ? sensors.power.value   : (realRiding?0:sim.power);
+  live.hr      = sensors.hr.status==='connected'    && sensors.hr.value!=null    ? sensors.hr.value      : (realRiding?0:sim.hr);
+  live.cadence = sensors.cadence.status==='connected'&&sensors.cadence.value!=null? sensors.cadence.value : (sensors.power.cadence!=null&&sensors.power.status==='connected'? sensors.power.cadence : (realRiding?0:sim.cadence));
+  live.grade   = sim.grade; // barometer not available on web; illustrative
+  if(!realRiding && !(rec.active && gps.ok)) live.speed = sim.speed; // sim speed unless real GPS provides it
+  if(prefs.demo && rec.active) live.speed = sim.speed;
+}
+
+/* ===================== freeze accounting + auto-pause ===================== */
+function setFrozen(manual, auto){
+  const was = rec.paused || rec.autoPaused;
+  rec.paused = manual; rec.autoPaused = auto;
+  const now = rec.paused || rec.autoPaused;
+  if(!was && now) rec.freezeStart = nowMs();
+  else if(was && !now){ rec.pausedMs += nowMs()-rec.freezeStart; rec.freezeStart=0; }
+}
+function moving(){ return (live.speed||0) > 4 || (live.power||0) > 20 || (live.cadence||0) > 10; }
+function stopped(){ return (live.speed||0) < 2.5 && (live.power||0) < 10 && (live.cadence||0) < 5; }
+function autoPauseCheck(){
+  if(!rec.active || rec.paused) return;                 // not recording, or manually paused → ignore
+  if(!prefs.autoPause){ if(rec.autoPaused){ setFrozen(false,false); render(); } return; }
+  if(!rec.autoPaused){
+    if(stopped()){ rec.lowTicks=(rec.lowTicks||0)+1; if(rec.lowTicks>=2){ setFrozen(false,true); render(); } }
+    else rec.lowTicks=0;
+  } else if(moving()){ setFrozen(false,false); rec.lowTicks=0; render(); }
+}
+
+/* ===================== recording ===================== */
+async function startRide(){
+  rec.active=true; rec.paused=false; rec.autoPaused=false; rec.pausedMs=0; rec.freezeStart=0; rec.lowTicks=0; rec.startMs=nowMs(); rec.secs=0; rec.dist=0; rec.ascent=0; rec.lastAlt=null;
+  rec.maxSpeed=0; rec.maxPower=0; rec.sumPower=0; rec.nPower=0; rec.sumHr=0; rec.nHr=0; rec.n=0;
+  rec.lapIdx=1; rec.lapSecs=0; rec.lapDist=0; rec.lapSumPower=0; rec.lapN=0; rec.lastLapSecs=0; rec.lastLapAvg=0;
+  rec.histPower=[]; rec.histHr=[]; rec.points=[];
+  startGps();
+  try{ if('wakeLock' in navigator){ rec.wakeLock = await navigator.wakeLock.request('screen'); } }catch(e){}
+  render();
+}
+function sampleRide(){ // called every 1s while recording
+  if(!rec.active || rec.paused || rec.autoPaused) return;
+  refreshLive();
+  rec.secs = Math.round((nowMs()-rec.startMs-rec.pausedMs)/1000);
+  const p=live.power||0, h=live.hr||0, sp=live.speed||0;
+  if(prefs.demo){ rec.dist += sp*(1/3600); } // demo: integrate sim speed (GPS handles real)
+  rec.maxSpeed=Math.max(rec.maxSpeed,sp); rec.maxPower=Math.max(rec.maxPower,p);
+  if(p>0){ rec.sumPower+=p; rec.nPower++; } if(h>0){ rec.sumHr+=h; rec.nHr++; } rec.n++;
+  rec.histPower=rec.histPower.slice(-47).concat(p); rec.histHr=rec.histHr.slice(-47).concat(h);
+  // auto-lap each 5km
+  rec.lapSecs=rec.secs - (rec.lapStartSecs||0); rec.lapDist=rec.dist-(rec.lapStartDist||0);
+  rec.lapSumPower+=p; rec.lapN++;
+  if(rec.lapDist>=5){ rec.lastLapSecs=rec.lapSecs; rec.lastLapAvg=rec.lapSumPower/Math.max(1,rec.lapN); rec.lapIdx++; rec.lapStartSecs=rec.secs; rec.lapStartDist=rec.dist; rec.lapSumPower=0; rec.lapN=0; }
+  const pt={ t:new Date(rec.startMs+rec.secs*1000).toISOString(), lat:gps.last&&gps.last.lat, lng:gps.last&&gps.last.lng, alt:gps.last&&gps.last.alt, dist:rec.dist*1000, power:p, hr:h, cad:Math.round(live.cadence||0), spd:sp };
+  rec.points.push(pt);
+}
+function stopRide(){
+  rec.active=false; rec.paused=false; rec.autoPaused=false; stopGps(); try{ if(rec.wakeLock){ rec.wakeLock.release(); rec.wakeLock=null; } }catch(e){}
+  const dur=rec.secs, dist=rec.dist, avgP=rec.nPower?Math.round(rec.sumPower/rec.nPower):0, avgH=rec.nHr?Math.round(rec.sumHr/rec.nHr):0;
+  const np=Math.round(avgP*1.05), iff= profile.ftp? +(np/profile.ftp).toFixed(2):0; const tss = profile.ftp? Math.round((dur*np*iff)/(profile.ftp*3600)*100):0;
+  const ride = {
+    id:'r'+rec.startMs, date:new Date(rec.startMs).toISOString(), screen:prefs.selectedScreen, mock: prefs.demo || (!gps.ok && connectedCount()===0),
+    secs:dur, distKm:+dist.toFixed(2), avgSpeed:+(dur?dist/(dur/3600):0).toFixed(1), maxSpeed:+rec.maxSpeed.toFixed(1),
+    avgPower:avgP, maxPower:Math.round(rec.maxPower), np, iff, tss, avgHr:avgH, ascent:Math.round(rec.ascent),
+    tcx: buildTCX(rec.points, rec.startMs),
+  };
+  rides.unshift(ride); LS.set('rides', rides);
+  CloudSync.saveRide(ride);                    // persist this ride to the DB
+  lastRideSummary = ride;
+  // auto-download the TCX file
+  downloadTCX(ride);
+  render();
+}
+function buildTCX(points, startMs){
+  const tp = points.map(p=>{
+    const pos = (p.lat!=null&&p.lng!=null)? `<Position><LatitudeDegrees>${p.lat.toFixed(6)}</LatitudeDegrees><LongitudeDegrees>${p.lng.toFixed(6)}</LongitudeDegrees></Position>`:'';
+    const alt = (p.alt!=null)? `<AltitudeMeters>${p.alt.toFixed(1)}</AltitudeMeters>`:'';
+    const hr = p.hr>0? `<HeartRateBpm><Value>${p.hr}</Value></HeartRateBpm>`:'';
+    const cad = p.cad>0? `<Cadence>${Math.min(254,p.cad)}</Cadence>`:'';
+    const w = p.power>0? `<Extensions><TPX xmlns="http://www.garmin.com/xmlschemas/ActivityExtension/v2"><Watts>${p.power}</Watts></TPX></Extensions>`:'';
+    return `<Trackpoint><Time>${p.t}</Time>${pos}${alt}<DistanceMeters>${(p.dist||0).toFixed(1)}</DistanceMeters>${hr}${cad}${w}</Trackpoint>`;
+  }).join('');
+  const id=new Date(startMs).toISOString();
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2" xmlns:ns3="http://www.garmin.com/xmlschemas/ActivityExtension/v2">
+<Activities><Activity Sport="Biking"><Id>${id}</Id><Lap StartTime="${id}"><TotalTimeSeconds>${rec.secs}</TotalTimeSeconds><DistanceMeters>${(rec.dist*1000).toFixed(1)}</DistanceMeters><Intensity>Active</Intensity><TriggerMethod>Manual</TriggerMethod><Track>${tp}</Track></Lap><Creator><Name>cycleAPP</Name></Creator></Activity></Activities></TrainingCenterDatabase>`;
+}
+function downloadTCX(ride){
+  const blob=new Blob([ride.tcx],{type:'application/vnd.garmin.tcx+xml'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a');
+  a.href=url; a.download='cycleapp-'+ride.id+'.tcx'; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 4000);
+}
+async function shareStrava(ride){
+  const file=new File([ride.tcx], 'cycleapp-'+ride.id+'.tcx', {type:'application/vnd.garmin.tcx+xml'});
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file], title:'cycleAPP 라이딩', text:'스트라바에 업로드'}); return; }catch(e){ if(e.name==='AbortError') return; }
+  }
+  downloadTCX(ride); window.open('https://www.strava.com/upload/select','_blank');
+}
+
+/* ===================== body state (history) ===================== */
+function bodyState(){
+  const now=Date.now(), day=86400000;
+  const week = rides.filter(r=>now-new Date(r.date).getTime() < 7*day);
+  const weekTss = week.reduce((a,r)=>a+(r.tss||0),0);
+  const weekKm = week.reduce((a,r)=>a+(r.distKm||0),0);
+  const acute = rides.filter(r=>now-new Date(r.date).getTime()<7*day).reduce((a,r)=>a+(r.tss||0),0)/7;
+  const chronic = rides.filter(r=>now-new Date(r.date).getTime()<28*day).reduce((a,r)=>a+(r.tss||0),0)/28;
+  const tsb = chronic-acute; // 폼: +면 신선, -면 피로
+  let cond='데이터 부족', cc='var(--muted)';
+  if(rides.length>=2){ if(tsb> 5){cond='신선 · 컨디션 좋음'; cc='var(--green)';} else if(tsb<-12){cond='피로 누적 · 회복 권장'; cc='var(--red)';} else {cond='적정 · 훈련 가능'; cc='#eab308';} }
+  return { weekTss:Math.round(weekTss), weekKm:weekKm.toFixed(0), count:week.length, cond, cc, ctl:Math.round(chronic), atl:Math.round(acute), tsb:Math.round(tsb) };
+}
+
+/* ===================== rendering ===================== */
+function svgFor(kind){ return kind==='power'
+  ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="#eab308"><path d="M13 2L4 14h7l-1 8 9-12h-7z"></path></svg>'
+  : kind==='hr' ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="#ef4444"><path d="M12 21s-7-4.5-9.5-9C1 9 2.5 5.5 6 5.5c2 0 3.2 1.2 4 2.3.8-1.1 2-2.3 4-2.3 3.5 0 5 3.5 3.5 6.5C19 16.5 12 21 12 21z"></path></svg>'
+  : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M21 12a9 9 0 11-3-6.7L21 7"></path><path d="M21 3v4h-4"></path></svg>'; }
+function sensorRowHTML(kind){
+  const c=sensors[kind]; const st=c.status; const on=st==='connected'; const busy=st==='searching'||st==='connecting';
+  const valTxt = kind==='power'? (c.value!=null?c.value+' W':'') : kind==='hr'? (c.value!=null?c.value+' bpm':'') : (c.value!=null?c.value+' rpm':'');
+  let right;
+  if(on) right=`<div style="text-align:right;"><div class="sval" style="color:${kind==='hr'?'var(--red)':kind==='power'?'var(--accent)':'#fff'}">${valTxt||'연결됨'}</div><button data-act="toggleSensor" data-arg="${kind}" class="stag" style="color:var(--muted); background:none; border:0; margin-top:3px;">해제</button></div>`;
+  else if(busy) right=`<div class="row" style="gap:7px;"><div class="spin"></div><span style="font-size:12px; color:var(--accent);">${st==='searching'?'검색 중…':'페어링 중…'}</span></div>`;
+  else right=`<button data-act="toggleSensor" data-arg="${kind}" class="btn btn-primary" style="min-height:40px; padding:0 16px; font-size:13px;">연결</button>`;
+  return `<div class="srow ${on?'on':''}"><div class="sicon">${svgFor(kind)}</div><div style="flex:1; min-width:0;"><div class="sname">${c.name}</div><div class="sdev">${c.device&&c.device.name?esc(c.device.name):(on?'연결된 기기':'BLE 표준')}</div></div>${right}</div>`;
+}
+function paintSensors(){ const el=document.getElementById('sensorlist'); if(el) el.innerHTML=['power','hr','cadence'].map(sensorRowHTML).join(''); const nb=document.getElementById('nextbtn'); if(nb){ const n=connectedCount(); nb.disabled=false; nb.textContent = n>0? `다음 · 라이딩 화면 선택 (${n} 연결됨)` : '센서 없이 진행 (GPS만)'; } }
+
+function rideTab(){
+  if(ui.step==='sensors'){
+    const banner = bleSupported
+      ? `<div class="banner">이 브라우저는 BLE를 지원합니다. <b>연결</b>을 누르면 실제 센서를 검색합니다.</div>`
+      : `<div class="banner">⚠️ 이 브라우저(아이폰 기본 Safari)는 Web Bluetooth 미지원이라 <b>실제 센서를 연결할 수 없습니다</b>. 실제 파워·심박(예: Favero Assioma)을 쓰려면 <b>Bluefy</b> 같은 Web Bluetooth 브라우저로 이 페이지를 여세요. 시뮬레이션 테스트는 아래 <b>데모 모드</b>를 켜면 됩니다. (GPS·기록·TCX는 정상 동작)</div>`;
+    return `<div class="screen">
+      ${topbar()}
+      <div class="eyebrow">1 / 3 · 센서</div><h1 class="t">센서 연결</h1>
+      <p class="sub">파워·심박·케이던스를 연결하세요. 없으면 GPS만으로도 라이딩 가능합니다.</p>
+      <div style="margin-top:14px;">${banner}</div>
+      <div id="sensorlist" style="display:flex; flex-direction:column; gap:10px; margin-top:14px;">${['power','hr','cadence'].map(sensorRowHTML).join('')}</div>
+      <div class="card" style="margin-top:14px; display:flex; align-items:center; justify-content:space-between;">
+        <div><div style="font-weight:600;">데모(모의 데이터) 모드</div><div class="sub" style="margin-top:2px;">센서 없이 흐름을 테스트</div></div>
+        <div class="toggle" data-act="toggleDemo" style="background:${prefs.demo?'var(--accent)':'var(--line)'};"><div class="knob" style="left:${prefs.demo?'21px':'3px'};"></div></div>
+      </div>
+      <div class="card" style="margin-top:10px; display:flex; align-items:center; justify-content:space-between;">
+        <div><div style="font-weight:600;">자동 일시정지</div><div class="sub" style="margin-top:2px;">정지하면(속도·파워·케이던스 0) 자동으로 멈추고, 움직이면 재개</div></div>
+        <div class="toggle" data-act="toggleAutoPause" style="background:${prefs.autoPause?'var(--accent)':'var(--line)'};"><div class="knob" style="left:${prefs.autoPause?'21px':'3px'};"></div></div>
+      </div>
+      <button id="nextbtn" data-act="goSelect" class="btn btn-primary btn-block" style="margin-top:16px;">${connectedCount()>0?`다음 · 라이딩 화면 선택 (${connectedCount()} 연결됨)`:'센서 없이 진행 (GPS만)'}</button>
+    </div>`;
+  }
+  // select
+  return `<div class="screen">
+    ${topbar()}
+    <div class="eyebrow">2 / 3 · 화면</div><h1 class="t">라이딩 화면 선택</h1>
+    <p class="sub">이번 라이딩에 띄울 화면을 고르세요. 전부 실시간으로 움직입니다.</p>
+    <div id="selgrid" class="selgrid" style="margin-top:14px;">${SCREENS.map(s=>`<div class="selcard ${prefs.selectedScreen===s[0]?'on':''}" data-act="pick" data-arg="${s[0]}">${thumb(s[0])}<div class="nm">${s[1]}</div><div class="ds">${s[2]}</div></div>`).join('')}</div>
+    <div class="row" style="gap:10px; margin-top:16px;">
+      <button data-act="backSensors" class="btn btn-ghost" style="flex:none;">← 센서</button>
+      <button data-act="goRide" class="btn btn-green" style="flex:1;">라이딩 화면으로 →</button>
+    </div>
+  </div>`;
+}
+function rideFull(){
+  const v=viewState();
+  let ctrl, overlay='';
+  if(rec.active && rec.paused){
+    overlay = '<div>❚❚ 일시정지</div>';
+    ctrl = `<div class="meta"><div class="e" id="rec-e" style="color:#eab308;">${fmtTime(rec.secs)}</div><div class="l">${rec.dist.toFixed(2)} KM · 일시정지됨</div></div>
+      <button data-act="resumeRide" class="btn btn-green" style="flex:none; padding:0 20px;">▶ 재개</button>
+      <button data-act="stopAsk" class="btn btn-red" style="flex:none; padding:0 16px;">■ 저장</button>`;
+  } else if(rec.active && rec.autoPaused){
+    overlay = '<div>❚❚ 자동 일시정지</div><div style="font-size:13px; font-weight:600; color:#fff; opacity:.7; font-family:var(--ui); letter-spacing:0;">움직이면 자동으로 재개돼요</div>';
+    ctrl = `<div class="meta"><div class="e" id="rec-e" style="color:#eab308;">${fmtTime(rec.secs)}</div><div class="l">${rec.dist.toFixed(2)} KM · 자동 일시정지</div></div>
+      <button data-act="stopAsk" class="btn btn-red" style="flex:none; padding:0 18px;">■ 저장</button>`;
+  } else if(rec.active){
+    ctrl = `<div class="meta"><div class="e" id="rec-e">${fmtTime(rec.secs)}</div><div class="l"><span style="color:var(--red);">●</span> ${rec.dist.toFixed(2)} KM · 기록 중${prefs.autoPause?' · 자동':''}</div></div>
+      <button data-act="pauseRide" class="btn btn-ghost" style="flex:none; padding:0 16px;">❚❚ 일시정지</button>
+      <button data-act="stopAsk" class="btn btn-red" style="flex:none; padding:0 15px;">■ 저장</button>`;
+  } else {
+    ctrl = `<button data-act="exitRide" class="btn btn-ghost" style="flex:none;">나가기</button>
+      <div class="meta" style="text-align:center;"><div class="l" style="margin-bottom:2px;">${prefs.demo?'모의 데이터':(connectedCount()>0?(connectedCount()+' 센서 · GPS'):'GPS 전용')}</div></div>
+      <button data-act="startRide" class="btn btn-green" style="flex:none; padding:0 30px;">▶ 스타트</button>`;
+  }
+  return `<div class="ride">
+    <div class="ride-screen">
+      <div id="ridelive" style="height:100%;">${phoneInner(prefs.selectedScreen, v)}</div>
+      ${overlay ? `<div class="pause-overlay">${overlay}</div>` : ''}
+    </div>
+    <div class="ride-ctrl">${ctrl}</div>
+  </div>`;
+}
+function historyTab(){
+  const b=bodyState();
+  const list = rides.length? rides.map(r=>{
+    const d=new Date(r.date); const dt=`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    return `<div class="ride-item" data-act="openRide" data-arg="${r.id}">
+      <div style="flex:1;"><div style="font-weight:700;">${dt} ${r.mock?'<span class="badge" style="background:rgba(234,179,8,.15); color:#eab308;">모의</span>':''}</div>
+        <div class="sub" style="margin-top:3px;">${r.distKm} km · ${fmtTime(r.secs)} · 평균 ${r.avgPower}W · ${r.avgSpeed} km/h</div></div>
+      <div style="text-align:right;"><div style="font-family:var(--num); font-weight:800; font-size:20px;">${r.tss}</div><div class="sub">TSS</div></div></div>`;
+  }).join('') : `<div class="card" style="text-align:center; color:var(--muted);">아직 기록이 없어요. 라이딩 탭에서 첫 라이딩을 시작하세요.</div>`;
+  return `<div class="screen">
+    ${topbar()}
+    <div class="eyebrow">내 몸 상태</div><h1 class="t">기록 & 컨디션</h1>
+    <div class="card" style="margin-top:14px; display:flex; align-items:center; justify-content:space-between;">
+      <div><div class="sub">현재 컨디션 (TSB ${b.tsb>=0?'+':''}${b.tsb})</div><div style="font-size:18px; font-weight:800; color:${b.cc}; margin-top:3px;">${b.cond}</div></div>
+      <div style="text-align:right;"><div class="sub">CTL ${b.ctl} · ATL ${b.atl}</div></div>
+    </div>
+    <div class="stat3" style="margin-top:12px;">
+      <div><div class="n">${b.weekTss}</div><div class="k">이번주 TSS</div></div>
+      <div><div class="n">${b.weekKm}</div><div class="k">이번주 KM</div></div>
+      <div><div class="n">${b.count}</div><div class="k">이번주 라이딩</div></div>
+    </div>
+    <div style="margin-top:18px; font-weight:700;">라이딩 기록 (${rides.length})</div>
+    <div style="margin-top:10px;">${list}</div>
+  </div>`;
+}
+function settingsTab(){
+  return `<div class="screen">
+    ${topbar()}
+    <div class="eyebrow">개인 설정</div><h1 class="t">내 정보</h1>
+    <p class="sub">W/kg·파워존·심박존·TSS 계산에 쓰입니다.</p>
+    <div class="card" style="margin-top:14px;">
+      <div class="field"><div><label>몸무게</label></div><div class="row" style="gap:6px;"><input id="f_weight" type="number" inputmode="decimal" value="${profile.weight}"><span class="sub">kg</span></div></div>
+      <div class="field"><div><label>FTP</label><div class="hint">기능적 역치 파워</div></div><div class="row" style="gap:6px;"><input id="f_ftp" type="number" inputmode="numeric" value="${profile.ftp}"><span class="sub">W</span></div></div>
+      <div class="field"><div><label>키</label></div><div class="row" style="gap:6px;"><input id="f_height" type="number" inputmode="numeric" value="${profile.height}"><span class="sub">cm</span></div></div>
+      <div class="field"><div><label>나이</label></div><div class="row" style="gap:6px;"><input id="f_age" type="number" inputmode="numeric" value="${profile.age}"><span class="sub">세</span></div></div>
+      <div class="field"><div><label>최대 심박</label><div class="hint">비우면 220−나이</div></div><div class="row" style="gap:6px;"><input id="f_maxhr" type="number" inputmode="numeric" value="${profile.maxHr||''}" placeholder="${220-profile.age}"><span class="sub">bpm</span></div></div>
+      <div class="field"><div><label>성별</label></div><div class="seg" id="seg_sex"><button data-act="sex" data-arg="M" class="${profile.sex==='M'?'on':''}">남</button><button data-act="sex" data-arg="F" class="${profile.sex==='F'?'on':''}">여</button></div></div>
+    </div>
+    <div class="card" style="margin-top:12px; display:flex; align-items:center; justify-content:space-between;">
+      <div><div style="font-weight:600;">현재 추정</div><div class="sub" style="margin-top:2px;">FTP/체중 = <b style="color:var(--accent);">${(profile.ftp/profile.weight).toFixed(2)} W/kg</b> · 최대심박 ${maxHrOf()} bpm</div></div>
+    </div>
+    <button data-act="saveProfile" class="btn btn-primary btn-block" style="margin-top:16px;">저장</button>
+    <div style="margin-top:14px; text-align:center;"><a href="index.html" style="color:var(--muted); font-size:13px;">← 마케팅 랜딩 페이지 보기</a></div>
+  </div>`;
+}
+function topbar(){
+  return `<div class="topbar"><div class="brand"><div class="logo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="5.5" cy="17.5" r="3.5"></circle><circle cx="18.5" cy="17.5" r="3.5"></circle><path d="M15 6a1 1 0 100-2 1 1 0 000 2zm-3 11.5V14l-3-3 4-3 2 3h2"></path></svg></div>cycleAPP</div>
+    <span class="pill ${bleSupported?'live':'sim'}">${bleSupported?'BLE 지원':(prefs.demo?'데모 모드':'GPS 전용')}</span></div>`;
+}
+function tabbar(){
+  const ic={ ride:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5.5" cy="17.5" r="3.5"></circle><circle cx="18.5" cy="17.5" r="3.5"></circle><path d="M15 6a1 1 0 100-2 1 1 0 000 2zm-3 11.5V14l-3-3 4-3 2 3h2"></path></svg>',
+    history:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 109-9 9 9 0 00-9 9z"></path><path d="M12 7v5l3 2"></path></svg>',
+    settings:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.4-2.3 1a7 7 0 00-1.7-1L16.5 2h-4l-.4 2.6a7 7 0 00-1.7 1l-2.3-1-2 3.4 2 1.5a7 7 0 000 2l-2 1.5 2 3.4 2.3-1a7 7 0 001.7 1L12.5 22h4l.4-2.6a7 7 0 001.7-1l2.3 1 2-3.4-2-1.5a7 7 0 00.1-1z"></path></svg>' };
+  const t=(k,l)=>`<button data-act="tab" data-arg="${k}" class="${ui.tab===k?'on':''}">${ic[k]}<span>${l}</span></button>`;
+  return `<div class="tabbar">${t('ride','라이딩')}${t('history','기록')}${t('settings','설정')}</div>`;
+}
+
+function render(){
+  // full-screen ride view (no tab bar)
+  if (ui.tab==='ride' && ui.step==='ride'){ app.innerHTML = rideFull(); return; }
+  let body = ui.tab==='ride' ? rideTab() : ui.tab==='history' ? historyTab() : settingsTab();
+  app.innerHTML = body + tabbar() + (lastRideSummary? summaryModal():'') + (detailRide? detailModal():'');
+}
+function summaryModal(){
+  const r=lastRideSummary;
+  return `<div class="modal-bg" data-act="closeSummary"><div class="modal" onclick="event.stopPropagation()"><div class="grabber"></div>
+    <div style="text-align:center;"><div class="eyebrow">라이딩 저장 완료</div><div style="font-family:var(--num); font-weight:800; font-size:28px; margin-top:4px;">${r.distKm} km · ${fmtTime(r.secs)}</div></div>
+    <div style="margin-top:14px;">
+      <div class="kv"><span class="k">평균 파워</span><span class="v">${r.avgPower} W</span></div>
+      <div class="kv"><span class="k">NP · IF · TSS</span><span class="v">${r.np} · ${r.iff} · ${r.tss}</span></div>
+      <div class="kv"><span class="k">평균 / 최고 속도</span><span class="v">${r.avgSpeed} / ${r.maxSpeed}</span></div>
+      <div class="kv"><span class="k">평균 심박 · 상승</span><span class="v">${r.avgHr||'-'} · ${r.ascent} m</span></div>
+    </div>
+    <div class="sub" style="margin-top:10px; text-align:center;">✓ 자체 목록 저장 · ✓ TCX 파일 다운로드됨</div>
+    <div class="row" style="gap:10px; margin-top:14px;">
+      <button data-act="reDownload" class="btn btn-ghost" style="flex:1;">TCX 다시받기</button>
+      <button data-act="strava" class="btn btn-primary" style="flex:1;">스트라바 업로드</button>
+    </div>
+    <button data-act="closeSummary" class="btn btn-ghost btn-block" style="margin-top:10px;">닫기</button>
+  </div></div>`;
+}
+function detailModal(){
+  const r=detailRide; const d=new Date(r.date);
+  return `<div class="modal-bg" data-act="closeDetail"><div class="modal" onclick="event.stopPropagation()"><div class="grabber"></div>
+    <div style="display:flex; justify-content:space-between; align-items:baseline;"><div style="font-weight:800; font-size:18px;">${d.getMonth()+1}월 ${d.getDate()}일 라이딩</div>${r.mock?'<span class="badge" style="background:rgba(234,179,8,.15); color:#eab308;">모의</span>':''}</div>
+    <div style="margin-top:12px;">
+      <div class="kv"><span class="k">거리 · 시간</span><span class="v">${r.distKm} km · ${fmtTime(r.secs)}</span></div>
+      <div class="kv"><span class="k">평균 / 최고 파워</span><span class="v">${r.avgPower} / ${r.maxPower} W</span></div>
+      <div class="kv"><span class="k">NP · IF · TSS</span><span class="v">${r.np} · ${r.iff} · ${r.tss}</span></div>
+      <div class="kv"><span class="k">평균 / 최고 속도</span><span class="v">${r.avgSpeed} / ${r.maxSpeed} km/h</span></div>
+      <div class="kv"><span class="k">평균 심박 · 상승</span><span class="v">${r.avgHr||'-'} bpm · ${r.ascent} m</span></div>
+    </div>
+    <div class="row" style="gap:10px; margin-top:14px;">
+      <button data-act="dlDetail" class="btn btn-ghost" style="flex:1;">TCX 받기</button>
+      <button data-act="stravaDetail" class="btn btn-primary" style="flex:1;">스트라바</button>
+    </div>
+    <button data-act="delRide" class="btn btn-block" style="margin-top:10px; background:transparent; color:var(--red); border:1px solid var(--line);">이 기록 삭제</button>
+  </div></div>`;
+}
+
+/* ===================== live patching (no full re-render) ===================== */
+function liveTick(){
+  simTick(); refreshLive(); autoPauseCheck();
+  if (ui.tab==='ride' && ui.step==='ride'){
+    if(!rec.paused && !rec.autoPaused){ const el=document.getElementById('ridelive'); if(el) el.innerHTML=phoneInner(prefs.selectedScreen, viewState()); }
+    if(rec.active && !rec.paused && !rec.autoPaused){ const e=document.getElementById('rec-e'); if(e) e.textContent=fmtTime(rec.secs); }
+  } else if (ui.tab==='ride' && ui.step==='select'){
+    const g=document.getElementById('selgrid'); if(g){ /* update thumbs in place */ const cards=g.children; for(let i=0;i<SCREENS.length;i++){ const t=cards[i]&&cards[i].firstElementChild; if(t) t.outerHTML=thumb(SCREENS[i][0]); } }
+  } else if (ui.tab==='ride' && ui.step==='sensors'){
+    paintSensors();
+  }
+}
+
+/* ===================== events ===================== */
+function handle(act, arg){
+  switch(act){
+    case 'tab': ui.tab=arg; if(arg==='ride'&&ui.step==='ride'&&!rec.active) ui.step='sensors'; render(); break;
+    case 'toggleSensor': toggleSensor(arg); break;
+    case 'toggleDemo': prefs.demo=!prefs.demo; LS.set('prefs',prefs); render(); break;
+    case 'goSelect': ui.step='select'; render(); break;
+    case 'backSensors': ui.step='sensors'; render(); break;
+    case 'pick': prefs.selectedScreen=arg; LS.set('prefs',prefs); render(); break;
+    case 'goRide': ui.step='ride'; render(); break;
+    case 'exitRide': ui.step='select'; render(); break;
+    case 'startRide': startRide(); break;
+    case 'pauseRide': setFrozen(true, false); render(); break;
+    case 'resumeRide': setFrozen(false, false); rec.lowTicks=0; render(); break;
+    case 'toggleAutoPause': prefs.autoPause=!prefs.autoPause; LS.set('prefs',prefs); render(); break;
+    case 'stopAsk': if(confirm((rec.paused||rec.autoPaused)?'라이딩을 저장할까요?':'라이딩을 정지하고 저장할까요?')) stopRide(); break;
+    case 'closeSummary': lastRideSummary=null; ui.step='sensors'; render(); break;
+    case 'reDownload': downloadTCX(lastRideSummary); break;
+    case 'strava': shareStrava(lastRideSummary); break;
+    case 'openRide': detailRide=rides.find(r=>r.id===arg); render(); break;
+    case 'closeDetail': detailRide=null; render(); break;
+    case 'dlDetail': withTcx(detailRide, downloadTCX); break;
+    case 'stravaDetail': withTcx(detailRide, shareStrava); break;
+    case 'delRide': { const _id=detailRide.id; rides=rides.filter(r=>r.id!==_id); LS.set('rides',rides); CloudSync.deleteRide(_id); detailRide=null; render(); break; }
+    case 'sex': profile.sex=arg; render(); break;
+    case 'saveProfile': saveProfile(); break;
+  }
+}
+function saveProfile(){
+  const g=id=>document.getElementById(id);
+  profile.weight=Math.max(30,+g('f_weight').value||profile.weight);
+  profile.ftp=Math.max(50,+g('f_ftp').value||profile.ftp);
+  profile.height=Math.max(120,+g('f_height').value||profile.height);
+  profile.age=Math.max(10,+g('f_age').value||profile.age);
+  profile.maxHr=+g('f_maxhr').value||0;
+  LS.set('profile', profile);
+  render();
+  const t=document.createElement('div'); t.textContent='저장되었습니다'; t.style.cssText='position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--green);color:#fff;padding:10px 18px;border-radius:30px;font-weight:600;z-index:99'; document.body.appendChild(t); setTimeout(()=>t.remove(),1400);
+}
+
+/* fetch a ride's TCX on demand (rides pulled from the server arrive without it) */
+function withTcx(ride, cb){
+  if(!ride) return;
+  if(ride.tcx!=null) return cb(ride);
+  if(!CloudSync.enabled){ alert('TCX 데이터가 없습니다.'); return; }
+  CloudSync.req('GET','/api/rides/'+encodeURIComponent(ride.id))
+    .then(full=>{ if(full && full.tcx){ ride.tcx=full.tcx; cb(ride); } else { alert('TCX를 불러오지 못했습니다.'); } })
+    .catch(()=>alert('TCX를 불러오지 못했습니다 (서버 연결 확인).'));
+}
+
+/* reconcile local data with the DB once on load; adopt server singletons when set, else seed from local */
+function reconcileSingleton(key, local, server){
+  const def = DEFAULTS[key];
+  const serverIsDefault = server && Object.keys(def).every(k=> String(server[k])===String(def[k]));
+  if(server && !serverIsDefault){ Object.assign(local, server); LS.setLocalOnly(key, local); }
+  else { CloudSync.push(key, local); }         // server empty → seed it from this device
+}
+
+/* ===================== init ===================== */
+const app=document.getElementById('app');
+app.addEventListener('click', e=>{ const el=e.target.closest('[data-act]'); if(!el) return; e.preventDefault(); handle(el.dataset.act, el.dataset.arg); });
+render();
+setInterval(liveTick, 500);
+setInterval(()=>{ if(rec.active) sampleRide(); }, 1000);
+
+/* pull + merge cloud data (assumes auth already resolved) */
+async function doSync(){
+  const [srvRides, srvProfile, srvPrefs] = await Promise.all([
+    CloudSync.req('GET','/api/rides'),
+    CloudSync.req('GET','/api/profile'),
+    CloudSync.req('GET','/api/prefs'),
+  ]);
+  // rides: union by id (local keeps its TCX), newest first
+  const byId=new Map(rides.map(r=>[r.id, r]));
+  (srvRides||[]).forEach(s=>{ if(!byId.has(s.id)) byId.set(s.id, s); });
+  rides=Array.from(byId.values()).sort((a,b)=> new Date(b.date)-new Date(a.date));
+  LS.setLocalOnly('rides', rides);
+  // migrate: upload local rides the DB doesn't have yet
+  const srvIds=new Set((srvRides||[]).map(s=>s.id));
+  rides.forEach(r=>{ if(r.tcx!=null && !srvIds.has(r.id)) CloudSync.saveRide(r); });
+  // singletons
+  reconcileSingleton('profile', profile, srvProfile);
+  reconcileSingleton('prefs',   prefs,   srvPrefs);
+  render();
+}
+
+/* in-app login screen — collects id/pw and exchanges them for the API token via
+   POST /api/login. Resolves true on success, false if dismissed (offline mode). */
+function showLoginScreen(){
+  return new Promise(resolve=>{
+    const ov=document.createElement('div'); ov.id='login-overlay';
+    ov.style.cssText='position:fixed;inset:0;z-index:1000;background:linear-gradient(180deg,#0b0b0c,#121419);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;';
+    ov.innerHTML=`<div style="width:100%;max-width:340px;">
+      <div style="display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:6px;">
+        <div style="width:36px;height:36px;border-radius:10px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:18px;">🚴</div>
+        <div style="font-weight:800;font-size:22px;">cycleAPP</div></div>
+      <div style="text-align:center;color:var(--muted);font-size:13px;margin-bottom:22px;">클라우드 기록 동기화 로그인</div>
+      <input id="login-id" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" placeholder="아이디"
+        style="width:100%;height:50px;background:var(--surface);border:1px solid var(--line);border-radius:12px;color:#fff;font-size:16px;padding:0 14px;margin-bottom:12px;outline:none;">
+      <input id="login-pw" type="password" autocomplete="current-password" placeholder="비밀번호"
+        style="width:100%;height:50px;background:var(--surface);border:1px solid var(--line);border-radius:12px;color:#fff;font-size:16px;padding:0 14px;outline:none;">
+      <div id="login-err" style="color:var(--red);font-size:13px;min-height:18px;margin:10px 2px 0;"></div>
+      <button id="login-btn" class="btn btn-primary btn-block">로그인</button>
+      <button id="login-skip" class="btn btn-ghost btn-block" style="margin-top:10px;">오프라인으로 계속</button></div>`;
+    document.body.appendChild(ov);
+    const $=s=>ov.querySelector(s);
+    const submit=async()=>{
+      const u=$('#login-id').value.trim(), p=$('#login-pw').value, err=$('#login-err'), btn=$('#login-btn');
+      if(!u||!p){ err.textContent='아이디와 비밀번호를 입력하세요.'; return; }
+      err.textContent=''; btn.disabled=true; btn.textContent='확인 중…';
+      try{
+        const r=await fetch(API_BASE+'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
+        if(r.ok){ const d=await r.json(); CloudSync.setToken(d.token); ov.remove(); resolve(true); return; }
+        err.textContent = r.status===401 ? '아이디 또는 비밀번호가 올바르지 않습니다.' : ('로그인 오류 ('+r.status+')');
+      }catch(e){ err.textContent='서버에 연결할 수 없습니다.'; }
+      btn.disabled=false; btn.textContent='로그인';
+    };
+    $('#login-btn').addEventListener('click',submit);
+    $('#login-id').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#login-pw').focus(); });
+    $('#login-pw').addEventListener('keydown',e=>{ if(e.key==='Enter') submit(); });
+    $('#login-skip').addEventListener('click',()=>{ ov.remove(); resolve(false); });
+    setTimeout(()=>$('#login-id').focus(),60);
+  });
+}
+
+/* pull cloud data on boot (non-blocking, offline-safe, token-aware) */
+(async function bootSync(){
+  let health;
+  try{ health = await fetch(API_BASE+'/api/health',{cache:'no-store'}).then(r=>r.json()); }
+  catch(e){ CloudSync.enabled=false; return; }            // server unreachable → localStorage-only
+  if(health && health.protected && !CloudSync.token){
+    const ok = await showLoginScreen();
+    if(!ok){ CloudSync.enabled=false; return; }            // dismissed → offline / localStorage-only
+  }
+  try{ await doSync(); }
+  catch(e){
+    if(e && e.code===401){                                // stored token rejected → log in again
+      CloudSync.setToken('');
+      const ok = await showLoginScreen();
+      if(ok){ try{ await doSync(); }catch(e2){ CloudSync.setToken(''); CloudSync.enabled=false; } }
+      else { CloudSync.enabled=false; }
+    } else { CloudSync.enabled=false; }                   // other error → localStorage-only
+  }
+})();
+</script>
+</body>
+</html>

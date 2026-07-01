@@ -1,0 +1,13 @@
+node_modules/
+.env
+
+.vercel
+
+# Playwright MCP test artifacts
+.playwright-mcp/
+
+# OS / editor junk
+.DS_Store
+
+# Local Claude Code settings (shared agents/skills stay tracked)
+.claude/settings.local.json

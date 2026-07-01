@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<!-- cycleAPP marketing landing page — MOBILE-FIRST build.
+     Implemented from the Claude Design project "iPhone 속도계 앱 개발" (CycleLanding.dc.html + PhoneScreen.dc.html).
+     Self-contained: no build step, no dependencies. Open index.html in a browser.
+     Layout is phone-first and scales UP to desktop via min-width breakpoints. -->
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>cycleAPP — 아이폰이 곧 사이클 컴퓨터</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&family=Barlow:wght@500;600;700;800&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{margin:0; background:#0b0b0c;}
+  button{font-family:inherit; color:inherit;}
+  @keyframes ccspin{to{transform:rotate(360deg);}}
+  @keyframes ccpulse{0%,100%{opacity:.35;}50%{opacity:1;}}
+
+  /* ---- layout primitives (mobile defaults) ---- */
+  .root{ --gutter:18px; --sec:50px; --maxw:1200px; padding-bottom:86px; }
+  .wrap{ width:100%; max-width:var(--maxw); margin:0 auto; padding:0 var(--gutter); }
+  .sec{ padding-top:var(--sec); padding-bottom:var(--sec); }
+  .bg2{ background:var(--surface2); }
+
+  /* ---- type (fluid, phone-first) ---- */
+  .eyebrow{ font-size:12px; font-weight:600; letter-spacing:.12em; color:var(--accent); }
+  .h1{ font-family:var(--display); font-weight:800; line-height:1.02; letter-spacing:-.01em; text-transform:var(--htf); margin:0; font-size:clamp(33px,8.6vw,64px); text-wrap:balance; }
+  .h2{ font-family:var(--display); font-weight:800; line-height:1.06; text-transform:var(--htf); margin:10px 0 0; font-size:clamp(26px,6.4vw,42px); text-wrap:balance; }
+  .lead{ color:var(--muted); line-height:1.55; margin:14px 0 0; font-size:clamp(15px,3.7vw,18px); text-wrap:pretty; }
+
+  /* ---- buttons (48px+ touch targets) ---- */
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:6px; font-weight:600; font-size:15px; line-height:1; border:0; border-radius:30px; padding:0 22px; min-height:50px; cursor:pointer; }
+  .btn-primary{ background:var(--accent); color:var(--accent-ink); }
+  .btn-ghost{ background:var(--surface); color:var(--text); border:1px solid var(--line); }
+  .btn-block{ width:100%; }
+  .btn-sm{ min-height:42px; font-size:14px; padding:0 16px; }
+
+  /* ---- nav ---- */
+  .nav{ position:sticky; top:0; z-index:50; background:var(--bg); box-shadow:inset 0 -1px 0 var(--line); }
+  .nav-row{ display:flex; align-items:center; justify-content:space-between; height:60px; }
+  .brand{ display:flex; align-items:center; gap:9px; }
+  .brand-name{ font-family:var(--display); font-size:20px; font-weight:800; letter-spacing:.01em; }
+  .nav-links{ display:none; align-items:center; gap:24px; }
+  .nav-link{ font-size:14px; font-weight:500; color:var(--muted); cursor:pointer; }
+  .burger{ display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; border:1px solid var(--line); border-radius:12px; background:var(--surface); cursor:pointer; }
+  .nav-menu{ border-top:1px solid var(--line); padding:6px 0 14px; }
+  .nav-mlink{ display:block; padding:14px 2px; font-size:16px; font-weight:600; color:var(--text); border-bottom:1px solid var(--line); cursor:pointer; }
+
+  /* ---- hero ---- */
+  .hero{ display:grid; grid-template-columns:1fr; gap:28px; align-items:center; }
+  .hero-copy{ order:1; } .hero-art{ order:2; }
+  .phone-hero{ width:100%; max-width:300px; margin:0 auto; }
+  .badge{ display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:600; letter-spacing:.1em; color:var(--accent); margin-bottom:16px; }
+  .dot{ width:7px; height:7px; border-radius:9999px; background:var(--accent); display:inline-block; }
+  .cta-row{ display:flex; flex-wrap:wrap; gap:10px; margin-top:24px; }
+  .cta-row .btn{ flex:1 1 160px; }
+  .chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top:20px; }
+  .chip{ font-size:12px; font-weight:600; color:var(--muted); border:1px solid var(--line); border-radius:30px; padding:7px 13px; }
+
+  /* ---- live bar ---- */
+  .livebar{ background:var(--surface); box-shadow:inset 0 1px 0 var(--line), inset 0 -1px 0 var(--line); }
+  .livebar-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px 12px; padding:18px 0; }
+  .lv .l{ display:block; font-size:10px; font-weight:600; letter-spacing:.08em; color:var(--muted); }
+  .lv .v{ display:block; font-family:'Barlow'; font-weight:800; line-height:1; margin-top:3px; font-size:clamp(24px,6.4vw,32px); }
+
+  /* ---- features ---- */
+  .grid-feat{ display:grid; grid-template-columns:1fr; gap:14px; margin-top:28px; }
+  .card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:22px; }
+  .card .ic{ color:var(--accent); }
+  .card .t{ font-size:17px; font-weight:600; margin-top:14px; }
+  .card .b{ font-size:14px; line-height:1.55; color:var(--muted); margin:8px 0 0; }
+
+  /* ---- showcase carousel ---- */
+  .note{ display:flex; align-items:center; gap:8px; margin-top:16px; font-size:12px; color:var(--muted); flex-wrap:wrap; }
+  .showcase{ display:flex; gap:14px; margin-top:22px; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none; padding-bottom:6px; }
+  .showcase::-webkit-scrollbar{ display:none; }
+  .sc-item{ flex:0 0 90%; max-width:360px; scroll-snap-align:center; display:flex; flex-direction:column; gap:14px; align-items:center; }
+  .sc-item .cap{ text-align:center; }
+  .sc-item .cap .t{ font-size:16px; font-weight:600; }
+  .sc-item .cap .s{ font-size:13px; color:var(--muted); margin-top:3px; }
+
+  /* ---- sensor split ---- */
+  .split{ display:grid; grid-template-columns:1fr; gap:30px; align-items:center; }
+  .flow{ width:100%; max-width:330px; margin:0 auto; }
+  .feat-list{ display:flex; flex-direction:column; gap:14px; margin-top:24px; max-width:480px; }
+  .feat-row{ display:flex; align-items:flex-start; gap:12px; }
+  .feat-row .ic{ color:var(--accent); margin-top:1px; }
+  .feat-row .t{ font-size:15px; font-weight:600; }
+  .feat-row .d{ font-size:13px; color:var(--muted); margin-top:2px; }
+  .sensor-actions{ display:flex; align-items:center; gap:14px; margin-top:24px; flex-wrap:wrap; }
+  .toggle-row{ display:flex; align-items:center; gap:10px; cursor:pointer; user-select:none; }
+  .toggle{ width:46px; height:26px; border-radius:30px; position:relative; flex:none; }
+  .toggle .knob{ position:absolute; top:3px; width:20px; height:20px; border-radius:9999px; background:#fff; transition:left .18s ease; }
+
+  /* ---- performance ---- */
+  .perf-head{ display:flex; align-items:flex-end; justify-content:space-between; gap:18px; flex-wrap:wrap; }
+  .unit-toggle{ display:flex; align-items:center; gap:10px; cursor:pointer; user-select:none; }
+  .strip{ display:grid; grid-template-columns:repeat(2,1fr); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; margin-top:24px; }
+  .strip .cell{ background:var(--surface); padding:16px 18px; }
+  .strip .cell .k{ font-size:12px; font-weight:600; color:var(--muted); }
+  .strip .cell .val{ display:flex; align-items:baseline; gap:5px; margin-top:5px; }
+  .strip .cell .num{ font-family:'Barlow'; font-size:clamp(24px,6vw,30px); font-weight:800; }
+  .metrics{ display:grid; grid-template-columns:1fr; gap:12px; margin-top:14px; }
+  .metric{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:20px 22px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .metric .ico{ width:48px; height:48px; border-radius:9999px; background:var(--surface2); display:flex; align-items:center; justify-content:center; flex:none; }
+  .gauge-card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:22px; margin-top:14px; }
+  .tabs{ margin-top:26px; border-bottom:1px solid var(--line); display:flex; gap:22px; overflow-x:auto; scrollbar-width:none; }
+  .tabs::-webkit-scrollbar{ display:none; }
+  .tab{ cursor:pointer; padding-bottom:12px; position:relative; white-space:nowrap; }
+  .tab span{ font-size:15px; font-weight:600; color:var(--text); }
+  .tab .ul{ position:absolute; left:0; right:0; bottom:-1px; height:2px; background:var(--accent); }
+  .tabbody{ background:var(--surface); border:1px solid var(--line); border-top:0; border-radius:0 0 var(--radius) var(--radius); padding:24px 20px; min-height:230px; }
+
+  /* ---- export steps ---- */
+  .steps{ display:grid; grid-template-columns:1fr; gap:16px; margin-top:28px; }
+  .step .n{ font-family:'Barlow'; font-size:30px; font-weight:800; }
+  .step .t{ font-size:17px; font-weight:600; margin-top:6px; }
+  .step .b{ font-size:14px; line-height:1.5; color:var(--muted); margin:6px 0 0; }
+
+  /* ---- pricing ---- */
+  .price-card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:30px 26px; margin-top:30px; width:100%; max-width:420px; text-align:center; }
+  .price-feats{ display:flex; flex-direction:column; gap:12px; margin-top:22px; text-align:left; }
+  .price-feat{ display:flex; align-items:center; gap:10px; font-size:15px; }
+  .price-feat .ic{ color:var(--accent); display:inline-flex; flex:none; }
+
+  /* ---- cta / footer ---- */
+  .cta{ background:var(--accent); color:var(--accent-ink); padding:clamp(54px,12vw,84px) 0; text-align:center; }
+  .cta .h2{ color:var(--accent-ink); }
+  .foot{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px; padding:30px 0; }
+  .foot-links{ display:flex; gap:18px; flex-wrap:wrap; }
+  .foot-links span{ font-size:13px; color:var(--muted); }
+
+  /* ---- sticky mobile CTA dock ---- */
+  .dock{ position:fixed; left:0; right:0; bottom:0; z-index:60; background:rgba(11,11,12,.9); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); border-top:1px solid var(--line); padding:10px var(--gutter); padding-bottom:calc(10px + env(safe-area-inset-bottom)); }
+
+  /* ============ enhance upward ============ */
+  @media (min-width:600px){
+    .grid-feat{ grid-template-columns:1fr 1fr; }
+    .metrics{ grid-template-columns:1fr 1fr; }
+    .steps{ grid-template-columns:1fr 1fr; }
+  }
+  @media (min-width:760px){
+    .root{ --gutter:28px; --sec:74px; padding-bottom:0; }
+    .nav-links{ display:flex; }
+    .burger{ display:none; }
+    .nav-menu{ display:none !important; }
+    .dock{ display:none; }
+    .livebar-grid{ grid-template-columns:repeat(6,1fr); padding:22px 0; }
+    .strip{ grid-template-columns:repeat(4,1fr); }
+    .showcase{ display:grid; grid-template-columns:repeat(3,1fr); gap:22px; overflow:visible; }
+    .sc-item{ flex:none; max-width:none; }
+  }
+  @media (min-width:900px){
+    .root{ --gutter:32px; }
+    .hero{ grid-template-columns:1.08fr .92fr; gap:54px; }
+    .phone-hero{ max-width:330px; }
+    .cta-row .btn{ flex:0 0 auto; }
+    .split{ grid-template-columns:1fr 340px; gap:54px; }
+    .grid-feat{ grid-template-columns:repeat(3,1fr); gap:20px; }
+    .steps{ grid-template-columns:repeat(4,1fr); gap:20px; }
+  }
+  @media (min-width:1040px){
+    .showcase{ grid-template-columns:repeat(4,1fr); }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   Tweak defaults (from CycleLanding.dc.html data-props)
+   ============================================================ */
+const props = {
+  ridingScreen: '존2 훈련', theme: '다크', accent: '#2f6df6', heroLayout: '스플릿',
+  cornerRadius: 16, fontPair: 'Barlow', density: '보통', uppercaseHeadlines: false,
+  age: 49, height: 183, weight: 83, ftp: 277, vo2max: 52.7, maxHr: 190, raceRank: 'R3', racePct: 8.5,
+  showLiveBar: true, showLogos: true, showPricing: true,
+  showSpeed: true, showPower: true, showZone2: true, showTour: true,
+  showTrainer: true, showLap: true, showClimb: true, showRace: true,
+};
+
+/* ============================================================
+   Live state (port of DCLogic.state)
+   ============================================================ */
+const state = {
+  speed: 32, power: 210, cadence: 88, hr: 148, grade: 1.5,
+  alt: 60, ascent: 186, dist: 34.16, secs: 4672,
+  maxSpeed: 46.6, maxPower: 542, avgPowerV: 205, avgHrV: 151, n: 1500, target: 34,
+  histPower: Array.from({length:48},(_,i)=>200+90*Math.sin(i/3)),
+  histHr:    Array.from({length:48},(_,i)=>148+14*Math.sin(i/6)),
+  lapIdx: 3, lapSecs: 188, lapSumPower: 41000, lapN: 188, lapDist: 2.94, lastLapSecs: 642, lastLapAvg: 248,
+  climbTotal: 2400, distToTop: 1480, climbGrade: 7.2,
+  wkStepIdx: 3, wkRemain: 168, wkLo: 250, wkHi: 275,
+  perfTab: '파워프로필', unitWkg: false,
+  sensorState: { power: 'idle', cadence: 'idle', hr: 'idle' }, autoConnect: true,
+  flowStep: 'sensors', selectedScreen: 'zone2',
+  menuOpen: false,
+};
+
+let climbBarsCache = null;
+let showcasePaused = false, showcaseT = null;
+function pauseShowcase(){ showcasePaused = true; clearTimeout(showcaseT); }
+function resumeShowcaseSoon(){ clearTimeout(showcaseT); showcaseT = setTimeout(() => { showcasePaused = false; }, 1400); }
+
+/* ---------- helpers (port of DCLogic helpers) ---------- */
+function fmtTime(secs){
+  secs = Math.floor(secs);
+  const h = Math.floor(secs/3600), m = Math.floor((secs%3600)/60), ss = secs%60;
+  const p = n => String(n).padStart(2,'0');
+  return `${h}:${p(m)}:${p(ss)}`;
+}
+function ink(hex){
+  const c = hex.replace('#','');
+  const r = parseInt(c.slice(0,2),16), g = parseInt(c.slice(2,4),16), b = parseInt(c.slice(4,6),16);
+  return (0.299*r + 0.587*g + 0.114*b) > 150 ? '#111111' : '#ffffff';
+}
+
+/* ============================================================
+   computeVals — port of DCLogic.renderVals (data only)
+   ============================================================ */
+function computeVals(){
+  const s = state;
+  const styl = props.ridingScreen ?? '존2 훈련';
+  const theme = props.theme ?? '다크';
+  const accent = props.accent ?? '#2f6df6';
+  const radius = props.cornerRadius ?? 16;
+  const fontPair = props.fontPair ?? 'Barlow';
+  const density = props.density ?? '보통';
+  const hero = props.heroLayout ?? '스플릿';
+  const upper = props.uppercaseHeadlines ?? false;
+
+  const dark = theme === '다크';
+  const pal = dark
+    ? { bg:'#0b0b0c', surface:'#161618', surface2:'#101012', text:'#ffffff', muted:'#8a8a8d', line:'#262628' }
+    : { bg:'#ffffff', surface:'#f7f7f8', surface2:'#f0f0f1', text:'#111111', muted:'#707072', line:'#e3e3e5' };
+  const fonts = fontPair === 'Bebas + Inter'
+    ? { ui:"'Inter','Noto Sans KR',sans-serif", display:"'Bebas Neue','Noto Sans KR',sans-serif" }
+    : fontPair === 'Inter'
+    ? { ui:"'Inter','Noto Sans KR',sans-serif", display:"'Inter','Noto Sans KR',sans-serif" }
+    : { ui:"'Inter','Noto Sans KR',sans-serif", display:"'Barlow','Noto Sans KR',sans-serif" };
+  const pad = density === '여유' ? '112px' : density === '압축' ? '54px' : '84px';
+  const variantMap = { '속도 중심':'speed', '파워 중심':'power', '존2 훈련':'zone2', '투어 · 내비':'tour', '로라용':'trainer', '랩 훈련':'lap', '클라이밍':'climb', '레이스 미니멀':'race' };
+  const heroVariant = variantMap[styl] || 'zone2';
+  const heroDir = hero === '스플릿' ? 'row' : 'column';
+  const heroAlign = hero === '스플릿' ? 'center' : hero === '중앙 정렬' ? 'center' : 'flex-start';
+  const heroTextAlign = hero === '중앙 정렬' ? 'center' : 'left';
+  const heroJustify = hero === '중앙 정렬' ? 'center' : 'flex-start';
+
+  const avg = s.secs > 0 ? s.dist / (s.secs / 3600) : 0;
+  const f = Math.min(s.speed / 60, 1);
+  const cx = 160, cy = 160, R = 130, th = Math.PI - f * Math.PI;
+  const hrV = s.hr;
+  const zHr = [['Z1','#3b82f6',114],['Z2','#16a34a',133],['Z3','#eab308',152],['Z4','#f97316',171],['Z5','#ef4444',9999]];
+  let hrIdx = zHr.findIndex(z => hrV < z[2]); if (hrIdx < 0) hrIdx = 4;
+  const hrZoneColor = zHr[hrIdx][1], hrZone = zHr[hrIdx][0], hrZoneName = zHr[hrIdx][0];
+  const zPw = [['Z1','#3b82f6',120],['Z2','#16a34a',200],['Z3','#eab308',260],['Z4','#f97316',320],['Z5','#ef4444',99999]];
+  let pwIdx = zPw.findIndex(z => s.power < z[2]); if (pwIdx < 0) pwIdx = 4;
+  const mkZones = (arr, idx) => arr.map((z, i) => ({ label: z[0], color: z[1], op: i === idx ? '1' : '0.28', h: i === idx ? '100%' : '50%', hflat: i === idx ? '12px' : '6px' }));
+  const hrZones = mkZones(zHr, hrIdx), pwZones = mkZones(zPw, pwIdx);
+  const power3s = Math.round(s.histPower.slice(-2).reduce((a, b) => a + b, 0) / Math.min(2, s.histPower.length));
+  const wkg = (s.power / (props.weight ?? 83)).toFixed(1);
+
+  if (!climbBarsCache) {
+    const g = [5,6,8,7,9,11,8,6,7,10,12,9,6,4];
+    const col = x => x < 5 ? '#19c37d' : x < 7 ? '#ffd23f' : x < 10 ? '#ff8a3d' : '#ff3b30';
+    climbBarsCache = g.map(x => ({ h: (28 + x * 6).toFixed(0), color: col(x) }));
+  }
+  const vam = Math.max(0, Math.round(s.speed * 10 * s.climbGrade));
+  const elevRem = Math.round(s.distToTop * s.climbGrade / 100);
+  const climbMarker = (100 * (1 - s.distToTop / s.climbTotal)).toFixed(1);
+  const lapAvg = Math.round(s.lapSumPower / Math.max(1, s.lapN));
+  const distToTurn = 80 + (s.secs % 18) * 25;
+  const turns = ['우회전', '좌회전', '직진 유지', '합류'];
+
+  const show = {
+    speed: props.showSpeed ?? true, power: props.showPower ?? true,
+    zone2: props.showZone2 ?? true, tour: props.showTour ?? true,
+    trainer: props.showTrainer ?? true, lap: props.showLap ?? true,
+    climb: props.showClimb ?? true, race: props.showRace ?? true,
+  };
+  const visibleCount = Object.values(show).filter(Boolean).length;
+  const scCols = Math.min(Math.max(visibleCount, 1), 4);
+  const scPhoneMax = { 1: '420px', 2: '340px', 3: '290px', 4: '240px' }[scCols];
+
+  // ===== 내 운동 역량 (My Performance) =====
+  const age = props.age ?? 49;
+  const height = props.height ?? 183;
+  const weight = props.weight ?? 83;
+  const ftp = props.ftp ?? 277;
+  const vo2max = props.vo2max ?? 52.7;
+  const maxHr = props.maxHr ?? 190;
+  const raceRank = props.raceRank ?? 'R3';
+  const racePct = props.racePct ?? 8.5;
+  const ftpWkg = ftp / weight;
+  const isWkg = !!s.unitWkg;
+  const fmtP = w => isWkg ? (w / weight).toFixed(2) : String(Math.round(w));
+  const unitLabel = isWkg ? 'W/kg' : 'watts';
+  const ppDefs = [['5초', 3.30], ['1분', 1.66], ['5분', 1.20], ['20분', 1.05], ['FTP', 1.00]];
+  const ppMax = Math.round(ftp * 3.30);
+  const powerProfile = ppDefs.map(([label, k]) => {
+    const w = Math.round(ftp * k);
+    return { label, disp: fmtP(w), bar: (w / ppMax * 100).toFixed(0) + '%' };
+  });
+  const zoneDefs = [['Z1 회복', 22, '#3b82f6'], ['Z2 지구력', 36, '#16a34a'], ['Z3 템포', 16, '#84cc16'], ['Z4 역치', 12, '#eab308'], ['Z5 VO₂', 8, '#f97316'], ['Z6 무산소', 4, '#ef4444'], ['Z7 신경근', 2, '#b91c1c']];
+  const zMax = Math.max(...zoneDefs.map(z => z[1]));
+  const perfZones = zoneDefs.map(([label, pct, color]) => ({ label, pct: pct + '%', bar: (pct / zMax * 100).toFixed(0) + '%', color }));
+  const tssVals = [320, 410, 365, 470, 505, 430, 540, 612];
+  const tMax = Math.max(...tssVals);
+  const perfTrend = tssVals.map((vv, i) => ({ label: 'W' + (i + 1), bar: (vv / tMax * 100).toFixed(0) + '%', v: vv }));
+  const catBands = [[5.0, 'Cat 1 · 엘리트'], [4.5, 'Cat 2 · 상급'], [4.0, 'Cat 3 · 중상급'], [3.25, 'Cat 4 · 중급'], [2.5, 'Cat 5 · 입문 상'], [0, '입문']];
+  const catLabel = (catBands.find(b => ftpWkg >= b[0]) || catBands[catBands.length - 1])[1];
+  const catLeftPct = Math.max(2, Math.min(98, (ftpWkg - 2) / (6 - 2) * 100)).toFixed(1);
+
+  // ===== 센서 연결 (BLE pairing) =====
+  const sensorDefs = [
+    { key: 'power', name: '파워 미터', device: 'Favero Assioma', battery: 86, signal: '강함' },
+    { key: 'cadence', name: '케이던스', device: 'Magene S3+', battery: 72, signal: '강함' },
+    { key: 'hr', name: '심박 센서', device: 'Polar H10', battery: 91, signal: '보통' },
+  ];
+  const stTexts = { idle: '연결 안 됨', searching: '검색 중…', connecting: '페어링 중…', connected: '연결됨' };
+  const sensorRows = sensorDefs.map(d => {
+    const st = s.sensorState[d.key];
+    const connected = st === 'connected';
+    return {
+      key: d.key, name: d.name, device: d.device, battery: d.battery + '%', signal: d.signal,
+      isPower: d.key === 'power', isCadence: d.key === 'cadence', isHr: d.key === 'hr',
+      statusText: stTexts[st], statusColor: connected ? '#16a34a' : (st === 'idle' ? '#8a8a8d' : '#2f6df6'),
+      connected, busy: st === 'searching' || st === 'connecting', idle: st === 'idle',
+      rowBg: connected ? 'rgba(22,163,74,0.10)' : '#161618',
+      rowBorder: connected ? 'rgba(22,163,74,0.45)' : '#262628',
+    };
+  });
+  const connCount = sensorRows.filter(r => r.connected).length;
+  const allConnected = connCount === 3;
+  const autoConnect = !!s.autoConnect;
+
+  // ===== onboarding flow: sensors → select screen → ride =====
+  const screenNames = { speed: '속도 중심', power: '파워 중심', zone2: '존2 훈련', tour: '투어 · 내비', trainer: '로라용', lap: '랩 훈련', climb: '클라이밍', race: '레이스 미니멀' };
+  const screenDesc = { speed: '아크 게이지에 큰 속도', power: '3초 파워·W/kg·존', zone2: '심박 존 Z1–Z5 실시간', tour: '맵 상단 + 데이터', trainer: '파워·케이던스·심박', lap: '랩 파워·직전 랩', climb: '경사·VAM·프로파일', race: '파워·속도·심박 크게' };
+  const screenOptions = Object.keys(screenNames).map(k => ({
+    key: k, name: screenNames[k], desc: screenDesc[k],
+    selected: s.selectedScreen === k,
+    rowBg: s.selectedScreen === k ? 'rgba(47,109,246,0.14)' : '#161618',
+    rowBorder: s.selectedScreen === k ? '#2f6df6' : '#262628',
+  }));
+
+  return {
+    sensorRows, connCount, allConnected, autoConnect,
+    flowSensors: s.flowStep === 'sensors', flowSelect: s.flowStep === 'select', flowRiding: s.flowStep === 'riding',
+    selectedScreen: s.selectedScreen, selectedScreenName: screenNames[s.selectedScreen], screenOptions,
+    nextBtnBg: allConnected ? '#16a34a' : '#202225',
+    nextBtnColor: allConnected ? '#fff' : '#6b6b6f',
+    nextBtnLabel: allConnected ? '다음 · 화면 선택' : '센서를 모두 연결하세요',
+    autoKnobLeft: autoConnect ? '23px' : '3px',
+    autoTrackBg: autoConnect ? 'var(--accent)' : 'var(--line)',
+    scanBtnLabel: connCount === 0 ? '센서 검색' : '다시 검색',
+    rideReady: allConnected ? '모든 센서 연결됨 · 준비 완료' : connCount + ' / 3 센서 연결됨',
+    perfTabTrend: s.perfTab === '훈련트렌드', perfTabZone: s.perfTab === '훈련영역분석', perfTabPower: s.perfTab === '파워프로필',
+    isWkg, unitLabel,
+    ageTxt: age, heightTxt: height, weightTxt: weight,
+    ftpTxt: ftp, ftpWkgTxt: ftpWkg.toFixed(2), vo2maxTxt: vo2max, maxHrTxt: maxHr,
+    raceRankTxt: raceRank, racePctTxt: racePct,
+    ftpCardVal: isWkg ? ftpWkg.toFixed(2) : String(ftp), ftpCardUnit: isWkg ? 'W/kg' : 'watts',
+    wattsLabelColor: isWkg ? 'var(--muted)' : 'var(--text)',
+    wkgLabelColor: isWkg ? 'var(--text)' : 'var(--muted)',
+    toggleKnobLeft: isWkg ? '23px' : '3px',
+    powerProfile, perfZones, perfTrend, catLabel, catLeftPct,
+    bg: pal.bg, surface: pal.surface, surface2: pal.surface2, text: pal.text, muted: pal.muted, line: pal.line,
+    accent, accentInk: ink(accent),
+    radiusPx: radius + 'px', padPx: pad, uiFont: fonts.ui, displayFont: fonts.display,
+    headlineTransform: upper ? 'uppercase' : 'none',
+    heroVariant, heroDir, heroAlign, heroTextAlign, heroJustify,
+    showLiveBar: props.showLiveBar ?? true, showLogos: props.showLogos ?? true, showPricing: props.showPricing ?? true,
+    showSpeed: show.speed, showPower: show.power, showZone2: show.zone2, showTour: show.tour,
+    showTrainer: show.trainer, showLap: show.lap, showClimb: show.climb, showRace: show.race,
+    scColsTpl: `repeat(${scCols}, minmax(0, 1fr))`, scPhoneMax, visibleCount,
+    hrZones, pwZones, hrZoneName, hrZoneIdx: hrIdx + 1, pwZoneIdx: pwIdx + 1,
+    power3sTxt: power3s, wkgTxt: wkg, npTxt: Math.round(s.avgPowerV * 1.05), maxPowerTxt: Math.round(s.maxPower),
+    speedInt: Math.round(s.speed), speedDec: s.speed.toFixed(1),
+    powerTxt: Math.round(s.power), cadenceTxt: s.cadence, hrTxt: Math.round(s.hr),
+    gradeTxt: (s.grade >= 0 ? '+' : '') + s.grade.toFixed(1),
+    distTxt2: s.dist.toFixed(2), timeTxt: fmtTime(s.secs),
+    avgSpeedTxt: avg.toFixed(1), maxSpeedTxt: s.maxSpeed.toFixed(1),
+    avgPowerTxt: Math.round(s.avgPowerV), avgHrTxt: Math.round(s.avgHrV), ascentTxt: Math.round(s.ascent),
+    hrZone, hrZoneColor,
+    mpx1: (cx + (R - 22) * Math.cos(th)).toFixed(1), mpy1: (cy - (R - 22) * Math.sin(th)).toFixed(1),
+    mpx2: (cx + (R + 6) * Math.cos(th)).toFixed(1), mpy2: (cy - (R + 6) * Math.sin(th)).toFixed(1),
+    lapIdx: s.lapIdx, lapTimeTxt: fmtTime(s.lapSecs), lastLapTxt: fmtTime(s.lastLapSecs),
+    lapAvgTxt: lapAvg, lapNpTxt: Math.round(lapAvg * 1.05), lapDistTxt: s.lapDist.toFixed(2),
+    climbCat: 'Cat 2', climbGradeTxt: s.climbGrade.toFixed(1), vamTxt: vam,
+    distToTopTxt: Math.round(s.distToTop), elevRemTxt: elevRem, climbBars: climbBarsCache, climbMarker,
+    nextTurnTxt: turns[s.lapIdx % turns.length], distToTurnTxt: Math.round(distToTurn) + ' m',
+    distToDestTxt: Math.max(0, 42 - s.dist).toFixed(1),
+  };
+}
+
+/* ============================================================
+   PhoneScreen component — port of PhoneScreen.dc.html (8 variants)
+   ============================================================ */
+function phoneFrame(inner){
+  return `<div style="width:100%; aspect-ratio:300 / 624; background:#08080a; border-radius:40px; padding:9px; box-shadow:0 18px 50px rgba(0,0,0,0.32); flex:none;">
+  <div style="position:relative; width:100%; height:100%; border-radius:32px; overflow:hidden;">
+    <div style="position:absolute; top:9px; left:50%; transform:translateX(-50%); width:88px; height:24px; border-radius:14px; background:#08080a; z-index:5;"></div>
+    ${inner}
+  </div>
+</div>`;
+}
+
+function renderPhone(variant, v){
+  let inner = '';
+  if (variant === 'speed') {
+    inner = `<div style="height:100%; background:#0b0b0c; color:#fff; display:flex; flex-direction:column; padding:34px 0 0;">
+      <div style="display:flex; justify-content:space-between; padding:0 16px;">
+        <div><div style="font-size:8px; font-weight:700; letter-spacing:0.12em; color:#8a8a8d;">AVG</div><div style="font-family:'Barlow'; font-size:17px; font-weight:700; color:#ff8a3d;">${v.avgSpeedTxt}</div></div>
+        <div style="text-align:right;"><div style="font-size:8px; font-weight:700; letter-spacing:0.12em; color:#8a8a8d;">MAX</div><div style="font-family:'Barlow'; font-size:17px; font-weight:700;">${v.maxSpeedTxt}</div></div>
+      </div>
+      <div style="flex:1; display:flex; align-items:center; justify-content:center; padding:6px 18px;">
+        <div style="position:relative; width:100%; max-width:228px;">
+          <svg viewBox="0 0 320 178" width="100%" style="display:block;">
+            <path d="M30,160 A130,130 0 0 1 68.1,68.1" fill="none" stroke="#19c37d" stroke-width="15"></path>
+            <path d="M68.1,68.1 A130,130 0 0 1 160,30" fill="none" stroke="#ffd23f" stroke-width="15"></path>
+            <path d="M160,30 A130,130 0 0 1 251.9,68.1" fill="none" stroke="#ff8a3d" stroke-width="15"></path>
+            <path d="M251.9,68.1 A130,130 0 0 1 290,160" fill="none" stroke="#ff3b30" stroke-width="15"></path>
+            <line x1="${v.mpx1}" y1="${v.mpy1}" x2="${v.mpx2}" y2="${v.mpy2}" stroke="#fff" stroke-width="4" stroke-linecap="round"></line>
+            <circle cx="${v.mpx2}" cy="${v.mpy2}" r="5" fill="#ff8a3d"></circle>
+          </svg>
+          <div style="position:absolute; left:0; right:0; bottom:-4px; text-align:center;">
+            <div style="font-family:'Barlow'; font-size:60px; font-weight:800; line-height:0.76;">${v.speedDec}</div>
+            <div style="font-size:8px; font-weight:700; letter-spacing:0.2em; color:#8a8a8d; margin-top:3px;">KM / H</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:2px; background:#202329;">
+        <div style="background:#101113; padding:15px 14px;"><div style="font-size:9px; font-weight:700; letter-spacing:0.1em; color:#8a8a8d;">거리 · KM</div><div style="font-family:'Barlow'; font-size:30px; font-weight:800; line-height:1; margin-top:4px;">${v.distTxt2}</div></div>
+        <div style="background:#101113; padding:15px 14px;"><div style="font-size:9px; font-weight:700; letter-spacing:0.1em; color:#8a8a8d;">파워 · W</div><div style="font-family:'Barlow'; font-size:30px; font-weight:800; line-height:1; margin-top:4px; color:#2f6df6;">${v.powerTxt}</div></div>
+        <div style="background:#101113; padding:15px 14px;"><div style="font-size:9px; font-weight:700; letter-spacing:0.1em; color:#8a8a8d;">시간 · TIME</div><div style="font-family:'Barlow'; font-size:24px; font-weight:800; line-height:1; margin-top:5px;">${v.timeTxt}</div></div>
+        <div style="background:#101113; padding:15px 14px;"><div style="font-size:9px; font-weight:700; letter-spacing:0.1em; color:#8a8a8d;">평균 · KM/H</div><div style="font-family:'Barlow'; font-size:30px; font-weight:800; line-height:1; margin-top:4px; color:#ff8a3d;">${v.avgSpeedTxt}</div></div>
+      </div>
+    </div>`;
+  } else if (variant === 'power') {
+    inner = `<div style="height:100%; background:#0f1011; color:#fff; display:flex; flex-direction:column; justify-content:space-between; padding:38px 14px 16px;">
+      <div>
+        <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:9px; font-weight:700; letter-spacing:0.12em; color:#2f6df6;">POWER · 파워</span><span style="font-size:9px; font-weight:600; color:#8a8a8d;">3초 평균 ${v.power3sTxt} W</span></div>
+        <div style="display:flex; align-items:baseline; gap:6px; margin-top:6px;"><span style="font-family:'Barlow'; font-size:68px; font-weight:800; line-height:0.78; color:#2f6df6;">${v.powerTxt}</span><span style="font-size:16px; font-weight:700; color:#8a8a8d;">W</span></div>
+        <div style="font-size:10px; font-weight:600; color:#cfcfd2; margin-top:2px;">${v.wkgTxt} W/kg · NP ${v.npTxt} W</div>
+      </div>
+      <div><div style="font-size:8px; font-weight:700; letter-spacing:0.1em; color:#8a8a8d; margin-bottom:5px;">파워 존 · Z${v.pwZoneIdx}</div>
+        <div style="display:flex; gap:3px; align-items:flex-end;">${v.pwZones.map(z=>`<div style="flex:1; display:flex; flex-direction:column; align-items:center;"><div style="height:28px; width:100%; display:flex; align-items:flex-end;"><div style="width:100%; height:${z.h}; background:${z.color}; opacity:${z.op}; border-radius:2px;"></div></div><div style="font-size:7px; font-weight:700; color:${z.color}; opacity:${z.op}; margin-top:3px;">${z.label}</div></div>`).join('')}</div>
+      </div>
+      <div style="display:flex; align-items:center; justify-content:space-between; border-top:1px solid #232427; border-bottom:1px solid #232427; padding:12px 2px;">
+        <span style="font-size:9px; font-weight:700; letter-spacing:0.12em; color:#8a8a8d;">속도 · KM/H</span>
+        <span style="font-family:'Barlow'; font-size:44px; font-weight:800; line-height:0.85;">${v.speedDec}</span>
+      </div>
+      <div style="display:flex;">
+        <div style="flex:1; text-align:center; padding:8px 0; border-right:1px solid #232427;"><div style="font-size:7px; font-weight:700; color:#8a8a8d;">평균 W</div><div style="font-family:'Barlow'; font-size:22px; font-weight:700;">${v.avgPowerTxt}</div></div>
+        <div style="flex:1; text-align:center; padding:8px 0; border-right:1px solid #232427;"><div style="font-size:7px; font-weight:700; color:#8a8a8d;">최고 W</div><div style="font-family:'Barlow'; font-size:22px; font-weight:700;">${v.maxPowerTxt}</div></div>
+        <div style="flex:1; text-align:center; padding:8px 0; border-right:1px solid #232427;"><div style="font-size:7px; font-weight:700; color:#8a8a8d;">케이던스</div><div style="font-family:'Barlow'; font-size:22px; font-weight:700;">${v.cadenceTxt}</div></div><div style="flex:1; text-align:center; padding:8px 0;"><div style="font-size:7px; font-weight:700; color:#8a8a8d;">심박 BPM</div><div style="font-family:'Barlow'; font-size:22px; font-weight:700; color:${v.hrZoneColor};">${v.hrTxt}</div></div>
+      </div>
+    </div>`;
+  } else if (variant === 'zone2') {
+    inner = `<div style="height:100%; background:#0f1011; color:#fff; display:flex; flex-direction:column; justify-content:space-between; padding:38px 14px 14px;">
+      <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:9px; font-weight:700; letter-spacing:0.1em; color:#16a34a;">ZONE 2 · 유산소 지구력</span><span style="display:inline-flex; align-items:center; height:16px; padding:0 8px; border-radius:30px; background:#16a34a; color:#fff; font-size:8px; font-weight:700;">목표 Z2</span></div>
+      <div style="display:flex; align-items:baseline; gap:8px; margin-top:8px;"><span style="font-family:'Barlow'; font-size:52px; font-weight:800; line-height:0.8; color:${v.hrZoneColor};">${v.hrTxt}</span><span style="font-size:12px; font-weight:700; color:#8a8a8d;">BPM</span><span style="margin-left:auto; font-size:13px; font-weight:800; color:${v.hrZoneColor};">내 존 · ${v.hrZoneName}</span></div>
+      <div style="display:flex; gap:3px; align-items:flex-end; margin-top:10px;">${v.hrZones.map(z=>`<div style="flex:1; display:flex; flex-direction:column; align-items:center;"><div style="height:34px; width:100%; display:flex; align-items:flex-end;"><div style="width:100%; height:${z.h}; background:${z.color}; opacity:${z.op}; border-radius:2px;"></div></div><div style="font-size:8px; font-weight:700; color:${z.color}; opacity:${z.op}; margin-top:4px;">${z.label}</div></div>`).join('')}</div>
+      <div style="margin-top:14px; padding-top:12px; border-top:1px solid #232427; display:flex; align-items:baseline; gap:8px;"><span style="font-size:8px; font-weight:700; letter-spacing:0.1em; color:#8a8a8d;">POWER</span><span style="font-family:'Barlow'; font-size:30px; font-weight:800; color:#2f6df6;">${v.powerTxt}</span><span style="font-size:10px; color:#8a8a8d;">W · ${v.wkgTxt} W/kg</span></div>
+      <div style="display:flex; gap:2px; align-items:flex-end; margin-top:8px;">${v.pwZones.map(z=>`<div style="flex:1; height:${z.hflat}; background:${z.color}; opacity:${z.op}; border-radius:2px;"></div>`).join('')}</div>
+      <div style="display:flex; border-top:1px solid #232427;">
+        <div style="flex:1; text-align:center; padding:9px 0; border-right:1px solid #232427;"><div style="font-size:7px; font-weight:700; color:#8a8a8d;">평균 심박</div><div style="font-family:'Barlow'; font-size:18px; font-weight:700; color:#ef4444;">${v.avgHrTxt}</div></div>
+        <div style="flex:1; text-align:center; padding:9px 0; border-right:1px solid #232427;"><div style="font-size:7px; font-weight:700; color:#8a8a8d;">평균 파워</div><div style="font-family:'Barlow'; font-size:18px; font-weight:700;">${v.avgPowerTxt}</div></div>
+        <div style="flex:1; text-align:center; padding:9px 0;"><div style="font-size:7px; font-weight:700; color:#8a8a8d;">시간</div><div style="font-family:'Barlow'; font-size:18px; font-weight:700;">${v.timeTxt}</div></div>
+      </div>
+    </div>`;
+  } else if (variant === 'tour') {
+    inner = `<div style="height:100%; background:#11151a; color:#fff; display:flex; flex-direction:column; padding-top:30px;">
+      <div style="display:flex; align-items:center; gap:10px; padding:9px 14px; background:#0b0e12;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2f6df6" stroke-width="2.2"><path d="M9 18V8a3 3 0 013-3h5"></path><path d="M14 2l4 3-4 3"></path></svg>
+        <div><div style="font-family:'Barlow'; font-size:19px; font-weight:800; line-height:1;">${v.distToTurnTxt}</div><div style="font-size:9px; color:#8a8a8d; font-weight:600;">후 ${v.nextTurnTxt}</div></div>
+      </div>
+      <div style="position:relative; overflow:hidden; background:#1a2026; height:46%;">
+        <svg width="100%" height="100%" viewBox="0 0 240 200" preserveAspectRatio="xMidYMid slice">
+          <rect width="240" height="200" fill="#1a2026"></rect>
+          <line x1="-20" y1="60" x2="260" y2="110" stroke="#2b333b" stroke-width="10"></line>
+          <line x1="40" y1="-20" x2="120" y2="220" stroke="#2b333b" stroke-width="8"></line>
+          <line x1="200" y1="-20" x2="150" y2="220" stroke="#2b333b" stroke-width="8"></line>
+          <path d="M120 200 L120 120 Q120 90 160 80 L200 72" fill="none" stroke="#2f6df6" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"></path>
+          <circle cx="120" cy="160" r="9" fill="#2f6df6" stroke="#fff" stroke-width="3"></circle>
+        </svg>
+      </div>
+      <div style="display:flex; flex-wrap:wrap; background:#0f1011; flex:1;">
+        <div style="width:50%; padding:10px 14px; border-right:1px solid #20262d; border-bottom:1px solid #20262d;"><div style="font-size:8px; font-weight:700; color:#8a8a8d;">거리 KM</div><div style="font-family:'Barlow'; font-size:24px; font-weight:700;">${v.distTxt2}</div></div>
+        <div style="width:50%; padding:10px 14px; border-bottom:1px solid #20262d;"><div style="font-size:8px; font-weight:700; color:#8a8a8d;">남은 거리 KM</div><div style="font-family:'Barlow'; font-size:24px; font-weight:700;">${v.distToDestTxt}</div></div>
+        <div style="width:50%; padding:10px 14px; border-right:1px solid #20262d; border-bottom:1px solid #20262d;"><div style="font-size:8px; font-weight:700; color:#8a8a8d;">속도 KM/H</div><div style="font-family:'Barlow'; font-size:24px; font-weight:700;">${v.speedDec}</div></div>
+        <div style="width:50%; padding:10px 14px; border-bottom:1px solid #20262d;"><div style="font-size:8px; font-weight:700; color:#8a8a8d;">시간</div><div style="font-family:'Barlow'; font-size:24px; font-weight:700;">${v.timeTxt}</div></div>
+        <div style="width:50%; padding:10px 14px; border-right:1px solid #20262d;"><div style="font-size:8px; font-weight:700; color:#8a8a8d;">평균 KM/H</div><div style="font-family:'Barlow'; font-size:24px; font-weight:700;">${v.avgSpeedTxt}</div></div>
+        <div style="width:50%; padding:10px 14px;"><div style="font-size:8px; font-weight:700; color:#8a8a8d;">파워 W</div><div style="font-family:'Barlow'; font-size:24px; font-weight:700; color:#2f6df6;">${v.powerTxt}</div></div>
+      </div>
+    </div>`;
+  } else if (variant === 'trainer') {
+    inner = `<div style="height:100%; background:#0f1011; color:#fff; display:flex; flex-direction:column; justify-content:space-between; padding:38px 14px 14px;">
+      <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:9px; font-weight:700; letter-spacing:0.12em; color:#7c8cff;">INDOOR · 로라</span><span style="font-size:9px; font-weight:600; color:#8a8a8d;">${v.timeTxt}</span></div>
+      <div style="display:flex; align-items:baseline; gap:6px; margin-top:6px;"><span style="font-family:'Barlow'; font-size:58px; font-weight:800; line-height:0.8; color:#2f6df6;">${v.powerTxt}</span><span style="font-size:13px; font-weight:700; color:#8a8a8d;">W</span><span style="margin-left:auto; font-size:12px; font-weight:700; color:#cfcfd2;">${v.wkgTxt} W/kg</span></div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; margin-top:12px; border-top:1px solid #232427;">
+        <div style="padding:9px 8px; border-right:1px solid #232427; border-bottom:1px solid #232427;"><div style="font-size:7px; font-weight:700; color:#8a8a8d;">속도 KM/H</div><div style="font-family:'Barlow'; font-size:22px; font-weight:700;">${v.speedDec}</div></div>
+        <div style="padding:9px 8px; border-bottom:1px solid #232427;"><div style="font-size:7px; font-weight:700; color:#8a8a8d;">케이던스 RPM</div><div style="font-family:'Barlow'; font-size:22px; font-weight:700;">${v.cadenceTxt}</div></div>
+        <div style="padding:9px 8px; border-right:1px solid #232427;"><div style="font-size:7px; font-weight:700; color:#8a8a8d;">심박 BPM</div><div style="font-family:'Barlow'; font-size:22px; font-weight:700; color:${v.hrZoneColor};">${v.hrTxt}</div></div>
+        <div style="padding:9px 8px;"><div style="font-size:7px; font-weight:700; color:#8a8a8d;">거리 KM</div><div style="font-family:'Barlow'; font-size:22px; font-weight:700;">${v.distTxt2}</div></div>
+      </div>
+      <div><div style="font-size:8px; font-weight:700; letter-spacing:0.1em; color:#8a8a8d; margin-bottom:5px;">심박 존 · ${v.hrZoneName}</div>
+        <div style="display:flex; gap:3px; align-items:flex-end;">${v.hrZones.map(z=>`<div style="flex:1; display:flex; flex-direction:column; align-items:center;"><div style="height:24px; width:100%; display:flex; align-items:flex-end;"><div style="width:100%; height:${z.h}; background:${z.color}; opacity:${z.op}; border-radius:2px;"></div></div><div style="font-size:7px; font-weight:700; color:${z.color}; opacity:${z.op}; margin-top:3px;">${z.label}</div></div>`).join('')}</div>
+      </div>
+    </div>`;
+  } else if (variant === 'lap') {
+    inner = `<div style="height:100%; background:#0f1011; color:#fff; display:flex; flex-direction:column; padding:38px 14px 14px;">
+      <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:9px; font-weight:700; letter-spacing:0.12em; color:#8a8a8d;">LAP · 랩 ${v.lapIdx}</span><span style="font-size:9px; font-weight:600; color:#8a8a8d;">AUTO 5 KM</span></div>
+      <div style="font-family:'Barlow'; font-size:50px; font-weight:800; line-height:0.82; margin-top:8px;">${v.lapTimeTxt}</div>
+      <div style="font-size:8px; font-weight:700; letter-spacing:0.14em; color:#8a8a8d; margin-top:1px;">랩 시간 · LAP TIME</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; margin-top:14px; border-top:1px solid #232427;">
+        <div style="padding:9px 6px; border-right:1px solid #232427; border-bottom:1px solid #232427;"><div style="font-size:7px; font-weight:700; letter-spacing:0.1em; color:#8a8a8d;">랩 평균 W</div><div style="font-family:'Barlow'; font-size:22px; font-weight:700;">${v.lapAvgTxt}</div></div>
+        <div style="padding:9px 6px; border-bottom:1px solid #232427;"><div style="font-size:7px; font-weight:700; letter-spacing:0.1em; color:#8a8a8d;">랩 NP W</div><div style="font-family:'Barlow'; font-size:22px; font-weight:700;">${v.lapNpTxt}</div></div>
+        <div style="padding:9px 6px; border-right:1px solid #232427; border-bottom:1px solid #232427;"><div style="font-size:7px; font-weight:700; letter-spacing:0.1em; color:#8a8a8d;">직전 랩</div><div style="font-family:'Barlow'; font-size:22px; font-weight:700;">${v.lastLapTxt}</div></div>
+        <div style="padding:9px 6px; border-bottom:1px solid #232427;"><div style="font-size:7px; font-weight:700; letter-spacing:0.1em; color:#8a8a8d;">랩 거리 KM</div><div style="font-family:'Barlow'; font-size:22px; font-weight:700;">${v.lapDistTxt}</div></div>
+        <div style="padding:9px 6px; border-right:1px solid #232427; border-bottom:1px solid #232427;"><div style="font-size:7px; font-weight:700; letter-spacing:0.1em; color:#8a8a8d;">현재 W</div><div style="font-family:'Barlow'; font-size:22px; font-weight:700; color:#2f6df6;">${v.powerTxt}</div></div>
+        <div style="padding:9px 6px; border-bottom:1px solid #232427;"><div style="font-size:7px; font-weight:700; letter-spacing:0.1em; color:#8a8a8d;">케이던스</div><div style="font-family:'Barlow'; font-size:22px; font-weight:700;">${v.cadenceTxt}</div></div>
+        <div style="padding:9px 6px; border-right:1px solid #232427;"><div style="font-size:7px; font-weight:700; letter-spacing:0.1em; color:#8a8a8d;">속도 KM/H</div><div style="font-family:'Barlow'; font-size:22px; font-weight:700;">${v.speedDec}</div></div>
+        <div style="padding:9px 6px;"><div style="font-size:7px; font-weight:700; letter-spacing:0.1em; color:#8a8a8d;">평균 KM/H</div><div style="font-family:'Barlow'; font-size:22px; font-weight:700;">${v.avgSpeedTxt}</div></div>
+      </div>
+      <div style="margin-top:auto; background:#2f6df6; color:#fff; border-radius:30px; padding:9px 0; text-align:center; font-size:11px; font-weight:600;">랩 버튼</div>
+    </div>`;
+  } else if (variant === 'climb') {
+    inner = `<div style="height:100%; background:#0f1011; color:#fff; display:flex; flex-direction:column; padding:38px 14px 14px;">
+      <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:9px; font-weight:700; letter-spacing:0.12em; color:#ff8a3d;">CLIMB · ${v.climbCat}</span><span style="font-size:9px; font-weight:600; color:#8a8a8d;">정상까지 ${v.distToTopTxt} m</span></div>
+      <div style="display:flex; align-items:baseline; gap:6px; margin-top:8px;"><span style="font-family:'Barlow'; font-size:62px; font-weight:800; line-height:0.78; color:#ff8a3d;">${v.climbGradeTxt}</span><span style="font-size:18px; font-weight:700; color:#ff8a3d;">%</span></div>
+      <div style="font-size:8px; font-weight:700; letter-spacing:0.14em; color:#8a8a8d;">현재 경사 · GRADIENT</div>
+      <div style="display:flex; margin-top:12px; border-top:1px solid #232427; border-bottom:1px solid #232427;">
+        <div style="flex:1; padding:9px 4px; border-right:1px solid #232427;"><div style="font-size:7px; font-weight:700; letter-spacing:0.1em; color:#8a8a8d;">VAM m/h</div><div style="font-family:'Barlow'; font-size:19px; font-weight:700;">${v.vamTxt}</div></div>
+        <div style="flex:1; padding:9px 4px; border-right:1px solid #232427;"><div style="font-size:7px; font-weight:700; letter-spacing:0.1em; color:#8a8a8d;">남은 고도 m</div><div style="font-family:'Barlow'; font-size:19px; font-weight:700;">${v.elevRemTxt}</div></div>
+        <div style="flex:1; padding:9px 4px; border-right:1px solid #232427;"><div style="font-size:7px; font-weight:700; letter-spacing:0.1em; color:#8a8a8d;">파워 W</div><div style="font-family:'Barlow'; font-size:19px; font-weight:700;">${v.powerTxt}</div></div>
+        <div style="flex:1; padding:9px 4px;"><div style="font-size:7px; font-weight:700; letter-spacing:0.1em; color:#8a8a8d;">속도 KM/H</div><div style="font-family:'Barlow'; font-size:19px; font-weight:700;">${v.speedDec}</div></div>
+      </div>
+      <div style="position:relative; height:74px; margin-top:auto; display:flex; align-items:flex-end; gap:2px;">
+        ${v.climbBars.map(b=>`<div style="flex:1; min-width:0; height:${b.h}%; background:${b.color};"></div>`).join('')}
+        <div style="position:absolute; top:-4px; bottom:0; left:${v.climbMarker}%; width:2px; background:#fff;"></div>
+      </div>
+      <div style="font-size:7px; font-weight:700; letter-spacing:0.12em; color:#8a8a8d; margin-top:6px;">남은 오르막 프로파일</div>
+    </div>`;
+  } else { // race
+    inner = `<div style="height:100%; background:#0b0b0c; color:#fff; display:flex; flex-direction:column; padding:38px 16px 16px;">
+      <div style="font-size:9px; font-weight:700; letter-spacing:0.14em; color:#8a8a8d;">RACE · 레이스</div>
+      <div style="flex:1; display:flex; flex-direction:column; justify-content:center; gap:4px;">
+        <div style="display:flex; align-items:baseline; gap:8px;"><span style="font-family:'Barlow'; font-size:64px; font-weight:800; line-height:0.82; color:#2f6df6;">${v.powerTxt}</span><span style="font-size:13px; font-weight:700; color:#8a8a8d;">W</span></div>
+        <div style="height:1px; background:#242426; margin:6px 0;"></div>
+        <div style="display:flex; align-items:baseline; gap:8px;"><span style="font-family:'Barlow'; font-size:64px; font-weight:800; line-height:0.82;">${v.speedDec}</span><span style="font-size:13px; font-weight:700; color:#8a8a8d;">KM/H</span></div>
+        <div style="height:1px; background:#242426; margin:6px 0;"></div>
+        <div style="display:flex; align-items:baseline; gap:8px;"><span style="font-family:'Barlow'; font-size:64px; font-weight:800; line-height:0.82; color:${v.hrZoneColor};">${v.hrTxt}</span><span style="font-size:13px; font-weight:700; color:#8a8a8d;">BPM</span><span style="margin-left:auto; font-size:12px; font-weight:800; color:${v.hrZoneColor};">${v.hrZoneName}</span></div>
+      </div>
+    </div>`;
+  }
+  return phoneFrame(inner);
+}
+
+/* ============================================================
+   Section renderers — MOBILE-FIRST (class-driven layout)
+   ============================================================ */
+function navHTML(v){
+  const open = state.menuOpen;
+  const links = ['기능','데이터','내보내기','가격'];
+  const burgerIcon = open
+    ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"></path></svg>'
+    : '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>';
+  return `<div class="nav" id="nav-bar"><div class="wrap">
+      <div class="nav-row">
+        <div class="brand">
+          <div style="width:28px; height:28px; border-radius:8px; background:var(--accent); display:flex; align-items:center; justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="${v.accentInk}" stroke-width="2"><circle cx="5.5" cy="17.5" r="3.5"></circle><circle cx="18.5" cy="17.5" r="3.5"></circle><path d="M15 6a1 1 0 100-2 1 1 0 000 2zm-3 11.5V14l-3-3 4-3 2 3h2"></path></svg></div>
+          <span class="brand-name">cycleAPP</span>
+        </div>
+        <div class="nav-links">
+          ${links.map(l=>`<span class="nav-link">${l}</span>`).join('')}
+          <button class="btn btn-primary btn-sm">TestFlight 받기</button>
+        </div>
+        <button class="burger" data-act="toggleMenu" aria-label="메뉴">${burgerIcon}</button>
+      </div>
+      ${open ? `<div class="nav-menu">
+        ${links.map(l=>`<div class="nav-mlink" data-act="closeMenu">${l}</div>`).join('')}
+        <button class="btn btn-primary btn-block" data-act="closeMenu" style="margin-top:12px;">TestFlight 받기</button>
+      </div>` : ''}
+    </div></div>`;
+}
+
+function heroHTML(v){
+  return `<section class="sec"><div class="wrap"><div class="hero">
+      <div class="hero-copy">
+        <div class="badge"><span class="dot"></span>실시간 사이클링 컴퓨터 · iOS</div>
+        <h1 class="h1">아이폰이 곧 사이클 컴퓨터가 된다</h1>
+        <p class="lead" style="max-width:520px;">파워·속도·케이던스·심박·경사를 한 화면에. 거치대에 올리고 달리면, 종료와 동시에 TCX 파일로 스트라바에 올라갑니다.</p>
+        <div class="cta-row">
+          <button class="btn btn-primary">TestFlight 받기</button>
+          <button class="btn btn-ghost">데모 보기</button>
+        </div>
+        <div class="chips">
+          <span class="chip">Favero Assioma</span>
+          <span class="chip">BLE 심박</span>
+          <span class="chip">GPS 속도·거리</span>
+          <span class="chip">기압계 경사도</span>
+        </div>
+      </div>
+      <div class="hero-art"><div class="phone-hero" id="hero-phone">${renderPhone(v.heroVariant, v)}</div></div>
+    </div></div></section>`;
+}
+
+function liveBarRow(v){
+  const cell = (l, val, red) => `<div class="lv"><span class="l">${l}</span><span class="v"${red?' style="color:#ef4444;"':''}>${val}</span></div>`;
+  return cell('POWER · W', v.powerTxt)
+       + cell('SPEED · KM/H', v.speedDec)
+       + cell('CADENCE · RPM', v.cadenceTxt)
+       + cell('HEART · BPM', v.hrTxt, true)
+       + cell('GRADE · %', v.gradeTxt)
+       + cell('DISTANCE · KM', v.distTxt2);
+}
+function liveBarSection(v){
+  if (!v.showLiveBar) return '';
+  return `<div class="livebar"><div class="wrap"><div class="livebar-grid" id="live-bar">${liveBarRow(v)}</div></div></div>`;
+}
+
+function logosHTML(v){
+  if (!v.showLogos) return '';
+  const logo = (t,c) => `<span style="font-family:var(--display); font-size:clamp(18px,4.6vw,22px); font-weight:700; color:${c||'var(--text)'}; opacity:${c?'1':'.7'};">${t}</span>`;
+  return `<div class="wrap" style="padding-top:36px; padding-bottom:36px;">
+      <div style="font-size:12px; font-weight:600; letter-spacing:.14em; color:var(--muted); text-align:center;">함께 작동 · WORKS WITH</div>
+      <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:12px 24px; margin-top:16px;">
+        ${logo('Favero Assioma')}${logo('BLE Heart Rate')}${logo('Apple GPS')}${logo('CoreMotion')}${logo('Strava','var(--accent)')}
+      </div>
+    </div>`;
+}
+
+function featuresHTML(v){
+  const card = (svg, t, b) => `<div class="card"><div class="ic">${svg}</div><div class="t">${t}</div><p class="b">${b}</p></div>`;
+  return `<section class="sec"><div class="wrap">
+      <div class="eyebrow">기능 · FEATURES</div>
+      <h2 class="h2" style="max-width:640px;">센서부터 스트라바까지, 한 앱에서 끝</h2>
+      <div class="grid-feat">
+        ${card('<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12a9 9 0 11-3-6.7L21 7"></path><path d="M21 3v4h-4"></path></svg>','센서 자동 재연결','한 번 연결한 파워·심박 센서는 다음 라이딩부터 앱이 알아서 스캔하고 붙입니다. 끊겨도 자동 재시도.')}
+        ${card('<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13 2L4 14h7l-1 8 9-12h-7z"></path></svg>','파워 · 케이던스','Favero Assioma 표준 CPS에서 파워(W)와 케이던스(rpm)를 동시에 읽고, 롤오버까지 정확히 처리합니다.')}
+        ${card('<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 11l19-9-9 19-2-8-8-2z"></path></svg>','GPS 속도 · 거리','아이폰 GPS로 속도·거리·경로를 기록. 정지·저속 노이즈는 임계값으로 걸러 거리가 튀지 않습니다.')}
+        ${card('<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 20h18L14 6l-4 7-3-3-4 10z"></path></svg>','기압계 경사도','CoreMotion 상대고도로 경사도(%)를 계산. 이동평균으로 평활화해 짧은 구간 노이즈를 줄입니다.')}
+        ${card('<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path><path d="M14 2v6h6M9 13h6M9 17h6"></path></svg>','TCX 기록','1초 단위로 파워·심박·케이던스·GPS·고도를 trackpoint에 쌓고, 종료 시 TCX 파일로 직렬화합니다.')}
+        ${card('<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path><path d="M17 8l-5-5-5 5M12 3v12"></path></svg>','스트라바 내보내기','종료하면 iOS 공유 시트로 TCX를 바로 내보내 스트라바에 업로드. 무료 구독으로도 충분합니다.')}
+      </div>
+    </div></section>`;
+}
+
+function showcaseItems(v){
+  const items = [
+    { k:'speed',   show:v.showSpeed,   title:'속도 중심',          sub:'아크 게이지에 큰 속도' },
+    { k:'power',   show:v.showPower,   title:'파워 중심',          sub:'3초 파워·W/kg·파워 존' },
+    { k:'zone2',   show:v.showZone2,   title:'존2 훈련 · 내 존 표시', sub:'심박 따라 Z1–Z5 실시간' },
+    { k:'tour',    show:v.showTour,    title:'투어 · 내비',         sub:'맵 상단 반 + 데이터' },
+    { k:'trainer', show:v.showTrainer, title:'로라용',             sub:'파워·케이던스·심박·거리' },
+    { k:'lap',     show:v.showLap,     title:'랩 훈련',            sub:'랩 파워·직전 랩으로 인터벌' },
+    { k:'climb',   show:v.showClimb,   title:'클라이밍 · 추천',     sub:'남은 오르막·경사로 페이스' },
+    { k:'race',    show:v.showRace,    title:'레이스 미니멀 · 추천', sub:'파워·속도·심박 크게' },
+  ];
+  return items.filter(i=>i.show).map(i=>`<div class="sc-item"><div style="width:100%;">${renderPhone(i.k, v)}</div><div class="cap"><div class="t">${i.title}</div><div class="s">${i.sub}</div></div></div>`).join('');
+}
+function showcaseSection(v){
+  return `<section class="sec bg2"><div class="wrap">
+      <div class="eyebrow">목적별 라이딩 화면 · 8 SCREENS</div>
+      <h2 class="h2" style="max-width:640px;">목적대로 고르는 라이딩 화면</h2>
+      <p class="lead" style="max-width:600px;">속도·파워·존2 훈련·투어·로라·랩 훈련, 그리고 추천 화면(클라이밍·레이스)까지 8가지. 존2 훈련 화면은 <strong style="color:var(--text);">현재 심박에 따른 내 존(Z1–Z5)</strong>을 실시간으로 표시합니다. 전부 라이브로 움직입니다.</p>
+      <div class="note"><span style="font-weight:600;">8개 화면</span><span>· 옆으로 넘겨 보세요 →</span></div>
+      <div class="showcase" id="showcase-grid">${showcaseItems(v)}</div>
+    </div></section>`;
+}
+
+function sensorFlowPhone(v){
+  if (v.flowSensors) {
+    const rows = v.sensorRows.map(sensor => {
+      const icon = sensor.isPower
+        ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="#eab308"><path d="M13 2L4 14h7l-1 8 9-12h-7z"></path></svg>'
+        : sensor.isCadence
+        ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M21 12a9 9 0 11-3-6.7L21 7"></path><path d="M21 3v4h-4"></path></svg>'
+        : '<svg width="20" height="20" viewBox="0 0 24 24" fill="#ef4444"><path d="M12 21s-7-4.5-9.5-9C1 9 2.5 5.5 6 5.5c2 0 3.2 1.2 4 2.3.8-1.1 2-2.3 4-2.3 3.5 0 5 3.5 3.5 6.5C19 16.5 12 21 12 21z"></path></svg>';
+      const right = sensor.connected
+        ? `<div style="display:flex; flex-direction:column; align-items:flex-end; gap:3px;">
+                      <span style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:#16a34a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3"><path d="M20 6L9 17l-5-5"></path></svg>연결됨</span>
+                      <span style="font-size:10px; color:#8a8a8d;">🔋 ${sensor.battery} · 신호 ${sensor.signal}</span>
+                    </div>`
+        : sensor.busy
+        ? `<div style="display:flex; align-items:center; gap:7px;">
+                      <div style="width:16px; height:16px; border-radius:9999px; border:2px solid #2f6df6; border-top-color:transparent; animation:ccspin 0.7s linear infinite;"></div>
+                      <span style="font-size:11px; font-weight:600; color:${sensor.statusColor};">${sensor.statusText}</span>
+                    </div>`
+        : `<button data-act="toggleSensor" data-arg="${sensor.key}" style="background:#2f6df6; color:#fff; border:0; border-radius:30px; padding:8px 14px; font-size:12px; font-weight:600; cursor:pointer; flex:none;">연결</button>`;
+      return `<div style="display:flex; align-items:center; gap:12px; background:${sensor.rowBg}; border:1px solid ${sensor.rowBorder}; border-radius:14px; padding:12px 13px;">
+                  <div style="width:40px; height:40px; border-radius:9999px; background:#1f2023; display:flex; align-items:center; justify-content:center; flex:none;">${icon}</div>
+                  <div style="flex:1; min-width:0;">
+                    <div style="font-size:14px; font-weight:600;">${sensor.name}</div>
+                    <div style="font-size:11px; color:#8a8a8d; margin-top:1px;">${sensor.device}</div>
+                  </div>
+                  ${right}
+                </div>`;
+    }).join('');
+    return `<div style="width:100%; aspect-ratio:300 / 624; background:#08080a; border-radius:46px; padding:10px; box-shadow:0 18px 50px rgba(0,0,0,0.32);">
+          <div style="position:relative; width:100%; height:100%; border-radius:36px; overflow:hidden; background:#0b0b0c; color:#fff; display:flex; flex-direction:column; padding:42px 16px 18px;">
+            <div style="position:absolute; top:11px; left:50%; transform:translateX(-50%); width:96px; height:26px; border-radius:14px; background:#08080a; z-index:5;"></div>
+            <div style="display:flex; align-items:center; gap:6px; font-size:10px; font-weight:700; letter-spacing:0.05em;"><span style="color:#2f6df6;">1 센서</span><span style="color:#3a3a3d;">›</span><span style="color:#5a5a5e;">2 화면</span><span style="color:#3a3a3d;">›</span><span style="color:#5a5a5e;">3 라이딩</span></div>
+            <div style="font-family:'Barlow'; font-size:24px; font-weight:800; margin-top:6px;">${v.rideReady}</div>
+
+            <div style="display:flex; align-items:center; justify-content:space-between; background:#161618; border-radius:14px; padding:12px 14px; margin-top:12px;">
+              <div><div style="font-size:13px; font-weight:600;">자동 연결</div><div style="font-size:10px; color:#8a8a8d; margin-top:2px;">켜면 다음부터 자동으로 붙어요</div></div>
+              <div data-act="toggleAuto" style="width:42px; height:24px; border-radius:30px; background:${v.autoTrackBg}; position:relative; cursor:pointer; flex:none;"><div style="position:absolute; top:3px; left:${v.autoKnobLeft}; width:18px; height:18px; border-radius:9999px; background:#fff; transition:left 0.18s ease;"></div></div>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:12px;">${rows}</div>
+
+            <button data-act="runAutoConnect" style="margin-top:14px; background:transparent; color:#8a8a8d; border:1px solid #262628; border-radius:30px; padding:11px 0; font-size:13px; font-weight:600; cursor:pointer;">${v.scanBtnLabel}</button>
+            <button data-act="goSelect" style="margin-top:auto; background:${v.nextBtnBg}; color:${v.nextBtnColor}; border:0; border-radius:30px; padding:15px 0; font-size:15px; font-weight:700; cursor:pointer;">${v.nextBtnLabel}</button>
+          </div>
+        </div>`;
+  }
+  if (v.flowSelect) {
+    const opts = v.screenOptions.map(opt => `<div data-act="pick" data-arg="${opt.key}" style="display:flex; align-items:center; justify-content:space-between; background:${opt.rowBg}; border:1px solid ${opt.rowBorder}; border-radius:12px; padding:10px 13px; cursor:pointer;">
+                  <div><div style="font-size:14px; font-weight:600;">${opt.name}</div><div style="font-size:10px; color:#8a8a8d; margin-top:1px;">${opt.desc}</div></div>
+                  ${opt.selected ? '<span style="width:20px; height:20px; border-radius:9999px; background:#2f6df6; display:flex; align-items:center; justify-content:center; flex:none;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 6L9 17l-5-5"></path></svg></span>' : ''}
+                </div>`).join('');
+    return `<div style="width:100%; aspect-ratio:300 / 624; background:#08080a; border-radius:46px; padding:10px; box-shadow:0 18px 50px rgba(0,0,0,0.32);">
+          <div style="position:relative; width:100%; height:100%; border-radius:36px; overflow:hidden; background:#0b0b0c; color:#fff; display:flex; flex-direction:column; padding:42px 16px 18px;">
+            <div style="position:absolute; top:11px; left:50%; transform:translateX(-50%); width:96px; height:26px; border-radius:14px; background:#08080a; z-index:5;"></div>
+            <div style="display:flex; align-items:center; gap:6px; font-size:10px; font-weight:700; letter-spacing:0.05em;"><span style="color:#16a34a;">✓ 센서</span><span style="color:#3a3a3d;">›</span><span style="color:#2f6df6;">2 화면</span><span style="color:#3a3a3d;">›</span><span style="color:#5a5a5e;">3 라이딩</span></div>
+            <div style="font-family:'Barlow'; font-size:24px; font-weight:800; margin-top:6px;">라이딩 화면 선택</div>
+            <div style="font-size:11px; color:#8a8a8d; margin-top:2px;">이번 라이딩에 띄울 화면을 고르세요</div>
+            <div style="display:flex; flex-direction:column; gap:7px; margin-top:12px; flex:1; overflow:hidden;">${opts}</div>
+            <div style="display:flex; gap:8px; margin-top:12px;">
+              <button data-act="backToSensors" style="background:transparent; color:#8a8a8d; border:1px solid #262628; border-radius:30px; padding:14px 18px; font-size:14px; font-weight:600; cursor:pointer; flex:none;">← 센서</button>
+              <button data-act="startRiding" style="flex:1; background:#16a34a; color:#fff; border:0; border-radius:30px; padding:14px 0; font-size:15px; font-weight:700; cursor:pointer;">라이딩 시작 →</button>
+            </div>
+          </div>
+        </div>`;
+  }
+  // flowRiding
+  return `<div id="ride-phone">${renderPhone(v.selectedScreen, v)}</div>
+          <button data-act="endRiding" style="margin-top:14px; width:100%; background:transparent; color:var(--muted); border:1px solid var(--line); border-radius:30px; padding:13px 0; font-size:14px; font-weight:600; cursor:pointer;">라이딩 종료 · 화면 다시 선택</button>`;
+}
+
+function sensorInner(v){
+  const featRow = (svg, t, d) => `<div class="feat-row"><span class="ic">${svg}</span><div><div class="t">${t}</div><div class="d">${d}</div></div></div>`;
+  return `<div class="sensor-copy">
+        <div class="eyebrow">센서 연결 · SENSORS</div>
+        <h2 class="h2" style="max-width:520px;">한 번 연결하면, 다음부턴 자동으로</h2>
+        <p class="lead" style="max-width:480px;">가민·와후처럼 BLE 표준 센서를 자동으로 스캔해서 붙입니다. 파워·케이던스·심박을 한 화면에서 연결하고, 다음 라이딩부터는 앱을 켜는 순간 알아서 재연결돼요.</p>
+        <div class="feat-list">
+          ${featRow('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 11-3-6.7L21 7"></path><path d="M21 3v4h-4"></path></svg>','자동 재연결','저장된 센서는 켜는 즉시 스캔·연결. 끊겨도 자동 재시도.')}
+          ${featRow('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20a8 8 0 100-16 8 8 0 000 16z"></path><path d="M12 2v2M12 20v2M2 12h2M20 12h2"></path></svg>','BLE 표준 호환','Favero·Magene·Polar 등 표준 BLE 파워·케이던스·심박 프로파일 지원.')}
+          ${featRow('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V5a2 2 0 012-2h2M4 17v2a2 2 0 002 2h2M16 3h2a2 2 0 012 2v2M16 21h2a2 2 0 002-2v-2"></path></svg>','다중 센서 동시 연결','파워·케이던스·심박을 한꺼번에 붙여 라이딩 즉시 시작.')}
+        </div>
+        <div class="sensor-actions">
+          <button class="btn btn-primary" data-act="runAutoConnect">${v.scanBtnLabel}</button>
+          <div class="toggle-row" data-act="toggleAuto">
+            <div class="toggle" style="background:${v.autoTrackBg};"><div class="knob" style="left:${v.autoKnobLeft};"></div></div>
+            <span style="font-size:14px; font-weight:600;">자동 연결</span>
+          </div>
+        </div>
+      </div>
+      <div class="flow">${sensorFlowPhone(v)}</div>`;
+}
+function sensorSection(v){
+  return `<section class="sec"><div class="wrap"><div class="split" id="sensor-inner">${sensorInner(v)}</div></div></section>`;
+}
+
+function perfInner(v){
+  const cell = (k, val, unit, accent) => `<div class="cell"><div class="k">${k}</div><div class="val"><span class="num"${accent?' style="color:var(--accent);"':''}>${val}</span><span style="font-size:12px; color:var(--muted);">${unit}</span></div></div>`;
+  const metric = (label, valHTML, color, svg) => `<div class="metric"><div><div style="font-size:13px; font-weight:600; color:var(--muted);">${label}</div><div style="display:flex; align-items:baseline; gap:8px; margin-top:8px;">${valHTML}</div></div><div class="ico" style="color:${color};">${svg}</div></div>`;
+  let tab = '';
+  if (v.perfTabPower) {
+    tab = `<div style="font-size:13px; font-weight:600; color:var(--muted);">구간별 최고 파워 · ${v.unitLabel}</div>
+      <div style="display:flex; align-items:flex-end; gap:14px; height:160px; margin-top:20px;">
+        ${v.powerProfile.map(p=>`<div style="flex:1; display:flex; flex-direction:column; align-items:center; height:100%; justify-content:flex-end;"><div style="font-family:'Barlow'; font-size:clamp(16px,4.4vw,20px); font-weight:800;">${p.disp}</div><div style="width:100%; max-width:64px; height:${p.bar}; background:var(--accent); border-radius:6px 6px 0 0; margin-top:8px;"></div><div style="font-size:12px; font-weight:600; color:var(--muted); margin-top:8px;">${p.label}</div></div>`).join('')}
+      </div>`;
+  } else if (v.perfTabZone) {
+    tab = `<div style="font-size:13px; font-weight:600; color:var(--muted);">파워 존별 시간 비율 · 최근 30일</div>
+      <div style="display:flex; flex-direction:column; gap:10px; margin-top:18px;">
+        ${v.perfZones.map(z=>`<div style="display:flex; align-items:center; gap:12px;"><div style="width:74px; font-size:12px; font-weight:600;">${z.label}</div><div style="flex:1; height:16px; background:var(--surface2); border-radius:9999px; overflow:hidden;"><div style="height:100%; width:${z.bar}; background:${z.color}; border-radius:9999px;"></div></div><div style="width:40px; text-align:right; font-family:'Barlow'; font-size:15px; font-weight:700;">${z.pct}</div></div>`).join('')}
+      </div>`;
+  } else {
+    tab = `<div style="font-size:13px; font-weight:600; color:var(--muted);">주간 훈련 부하 · TSS (최근 8주)</div>
+      <div style="display:flex; align-items:flex-end; gap:10px; height:160px; margin-top:20px;">
+        ${v.perfTrend.map(t=>`<div style="flex:1; display:flex; flex-direction:column; align-items:center; height:100%; justify-content:flex-end;"><div style="font-family:'Barlow'; font-size:14px; font-weight:700; color:var(--muted);">${t.v}</div><div style="width:100%; height:${t.bar}; background:var(--accent); border-radius:5px 5px 0 0; margin-top:6px;"></div><div style="font-size:11px; font-weight:600; color:var(--muted); margin-top:8px;">${t.label}</div></div>`).join('')}
+      </div>`;
+  }
+  const ul = '<div class="ul"></div>';
+  return `<div class="perf-head">
+        <div>
+          <div class="eyebrow">내 운동 역량 · MY PERFORMANCE</div>
+          <h2 class="h2">내 수준을 한눈에</h2>
+        </div>
+        <div class="unit-toggle" data-act="toggleUnit">
+          <span style="font-size:13px; font-weight:600; color:${v.wattsLabelColor};">Watts</span>
+          <div class="toggle" style="background:var(--accent);"><div class="knob" style="left:${v.toggleKnobLeft};"></div></div>
+          <span style="font-size:13px; font-weight:600; color:${v.wkgLabelColor};">W/kg</span>
+        </div>
+      </div>
+      <div class="strip">
+        ${cell('나이', v.ageTxt, '세')}
+        ${cell('키', v.heightTxt, 'cm')}
+        ${cell('몸무게', v.weightTxt, 'kg')}
+        ${cell('FTP / 체중', v.ftpWkgTxt, 'W/kg', true)}
+      </div>
+      <div class="metrics">
+        ${metric('레이스 순위', `<span style="font-family:'Barlow'; font-size:34px; font-weight:800; color:var(--accent); line-height:1;">${v.raceRankTxt}</span><span style="font-family:'Barlow'; font-size:28px; font-weight:800; line-height:1;">${v.racePctTxt}</span><span style="font-size:13px; color:var(--muted);">%</span>`, 'var(--accent)', '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13"></path><path d="M3 6h.01M3 12h.01M3 18h.01"></path></svg>')}
+        ${metric('VO₂ Max', `<span style="font-family:'Barlow'; font-size:34px; font-weight:800; line-height:1;">${v.vo2maxTxt}</span><span style="font-size:13px; color:var(--muted);">ml/kg/min</span>`, '#16a34a', '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3 8 4-16 3 8h4"></path></svg>')}
+        ${metric('FTP', `<span style="font-family:'Barlow'; font-size:34px; font-weight:800; line-height:1;">${v.ftpCardVal}</span><span style="font-size:13px; color:var(--muted);">${v.ftpCardUnit}</span>`, '#eab308', '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4 14h7l-1 8 9-12h-7z"></path></svg>')}
+        ${metric('최대 심박수', `<span style="font-family:'Barlow'; font-size:34px; font-weight:800; line-height:1;">${v.maxHrTxt}</span><span style="font-size:13px; color:var(--muted);">bpm</span>`, '#ef4444', '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.5-9C1 9 2.5 5.5 6 5.5c2 0 3.2 1.2 4 2.3.8-1.1 2-2.3 4-2.3 3.5 0 5 3.5 3.5 6.5C19 16.5 12 21 12 21z"></path></svg>')}
+      </div>
+      <div class="gauge-card">
+        <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px;"><span style="font-size:13px; font-weight:600; color:var(--muted);">운동 역량 · FTP 기준</span><span style="font-size:15px; font-weight:700; color:var(--accent);">${v.catLabel}</span></div>
+        <div style="position:relative; height:12px; border-radius:9999px; margin-top:16px; background:linear-gradient(90deg,#3b82f6,#16a34a,#eab308,#f97316,#ef4444);">
+          <div style="position:absolute; top:50%; left:${v.catLeftPct}%; transform:translate(-50%,-50%); width:20px; height:20px; border-radius:9999px; background:var(--surface); border:3px solid var(--text); box-shadow:0 1px 4px rgba(0,0,0,0.3);"></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:11px; font-weight:600; color:var(--muted);"><span>입문 2.0</span><span>중급 3.25</span><span>중상급 4.0</span><span>상급 4.5</span><span>엘리트 5.0+</span></div>
+      </div>
+      <div class="tabs">
+        <div class="tab" data-act="setTabTrend"><span>훈련 트렌드</span>${v.perfTabTrend ? ul : ''}</div>
+        <div class="tab" data-act="setTabZone"><span>훈련 영역 분석</span>${v.perfTabZone ? ul : ''}</div>
+        <div class="tab" data-act="setTabPower"><span>파워 프로필</span>${v.perfTabPower ? ul : ''}</div>
+      </div>
+      <div class="tabbody">${tab}</div>`;
+}
+function perfSection(v){
+  return `<section class="sec bg2"><div class="wrap" id="perf-inner">${perfInner(v)}</div></section>`;
+}
+
+function exportHTML(v){
+  const step = (n, active, t, b) => `<div class="step" style="border-top:2px solid ${active?'var(--accent)':'var(--line)'}; padding-top:18px;"><div class="n" style="color:${active?'var(--accent)':'var(--muted)'};">${n}</div><div class="t">${t}</div><p class="b">${b}</p></div>`;
+  return `<section class="sec"><div class="wrap">
+      <div class="eyebrow">내보내기 · EXPORT</div>
+      <h2 class="h2">종료하면, 스트라바까지 4단계</h2>
+      <div class="steps">
+        ${step('01', true,  '라이딩 종료', '기록을 멈추면 trackpoint가 마무리됩니다.')}
+        ${step('02', false, 'TCX 생성',   '파워·심박·고도·GPS가 담긴 파일을 만듭니다.')}
+        ${step('03', false, '공유 시트',    'iOS 공유 시트로 파일을 내보냅니다.')}
+        ${step('04', false, '스트라바 업로드', 'strava.com/upload 에 올리면 끝.')}
+      </div>
+    </div></section>`;
+}
+
+function pricingHTML(v){
+  if (!v.showPricing) return '';
+  const feat = t => `<div class="price-feat"><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"></path></svg></span><span>${t}</span></div>`;
+  return `<section class="sec bg2"><div class="wrap" style="display:flex; flex-direction:column; align-items:center;">
+      <div class="eyebrow">가격 · PRICING</div>
+      <h2 class="h2" style="text-align:center;">개인용, 그래서 무료</h2>
+      <div class="price-card">
+        <div style="font-size:14px; font-weight:600; color:var(--muted);">Personal</div>
+        <div style="display:flex; align-items:baseline; justify-content:center; gap:6px; margin-top:8px;"><span style="font-family:var(--display); font-size:clamp(48px,12vw,64px); font-weight:800; line-height:1;">₩0</span><span style="font-size:15px; color:var(--muted);">/ forever</span></div>
+        <div class="price-feats">
+          ${feat('파워·심박·케이던스 BLE 연결')}
+          ${feat('센서 자동 재연결')}
+          ${feat('TCX 기록 + 스트라바 내보내기')}
+          ${feat('3가지 라이딩 화면 스타일')}
+        </div>
+        <button class="btn btn-primary btn-block" style="margin-top:26px;">TestFlight 받기</button>
+      </div>
+    </div></section>`;
+}
+
+function ctaHTML(v){
+  return `<section class="cta"><div class="wrap">
+      <h2 class="h2" style="margin:0; font-size:clamp(30px,8vw,54px);">지금, 라이딩을 기록하세요</h2>
+      <p style="font-size:clamp(15px,4vw,17px); margin:16px 0 0; opacity:0.85;">거치대에 올리고, 달리고, 스트라바에 올리고.</p>
+      <button class="btn" style="background:var(--accent-ink); color:var(--accent); margin-top:26px;">TestFlight 받기</button>
+    </div></section>`;
+}
+
+function footerHTML(v){
+  return `<div style="background:var(--bg); border-top:1px solid var(--line);"><div class="wrap"><div class="foot">
+      <span style="font-family:var(--display); font-size:18px; font-weight:800;">cycleAPP</span>
+      <div class="foot-links"><span>기능</span><span>데이터</span><span>내보내기</span><span>가격</span></div>
+      <span style="font-size:12px; color:var(--muted);">개인용 iOS 앱 · 2026</span>
+    </div></div></div>`;
+}
+
+function dockHTML(v){
+  return `<div class="dock"><button class="btn btn-primary btn-block">TestFlight 받기 →</button></div>`;
+}
+
+function buildPage(v){
+  return `<div class="root" style="--bg:${v.bg}; --surface:${v.surface}; --surface2:${v.surface2}; --text:${v.text}; --muted:${v.muted}; --line:${v.line}; --accent:${v.accent}; --accent-ink:${v.accentInk}; --radius:${v.radiusPx}; --display:${v.displayFont}; --ui:${v.uiFont}; --htf:${v.headlineTransform}; background:var(--bg); color:var(--text); font-family:var(--ui); min-height:100vh;">
+    ${navHTML(v)}
+    ${heroHTML(v)}
+    ${liveBarSection(v)}
+    ${logosHTML(v)}
+    ${featuresHTML(v)}
+    ${showcaseSection(v)}
+    ${sensorSection(v)}
+    ${perfSection(v)}
+    ${exportHTML(v)}
+    ${pricingHTML(v)}
+    ${ctaHTML(v)}
+    ${footerHTML(v)}
+    ${dockHTML(v)}
+  </div>`;
+}
+
+/* ============================================================
+   Paint — full build once, then targeted zone updates
+   ============================================================ */
+function paintDynamic(v){
+  const hp = document.getElementById('hero-phone'); if (hp) hp.innerHTML = renderPhone(v.heroVariant, v);
+  const lb = document.getElementById('live-bar');   if (lb) lb.innerHTML = liveBarRow(v);
+  const sg = document.getElementById('showcase-grid');
+  if (sg && !showcasePaused) { const sl = sg.scrollLeft; sg.innerHTML = showcaseItems(v); sg.scrollLeft = sl; }
+  const rp = document.getElementById('ride-phone'); if (rp) rp.innerHTML = renderPhone(state.selectedScreen, v);
+}
+function paintNav(){
+  const n = document.getElementById('nav-bar');
+  if (n) n.outerHTML = navHTML(computeVals());
+}
+function commit(){
+  const v = computeVals();
+  const si = document.getElementById('sensor-inner'); if (si) si.innerHTML = sensorInner(v);
+  const pi = document.getElementById('perf-inner');   if (pi) pi.innerHTML = perfInner(v);
+  paintDynamic(v);
+}
+
+/* ============================================================
+   Sensor pairing logic (port of DCLogic connect/toggle/auto)
+   ============================================================ */
+let sensorTimers = [];
+function setSensor(key, val){ state.sensorState = { ...state.sensorState, [key]: val }; commit(); }
+function connectSensor(key, delay){
+  sensorTimers.push(setTimeout(() => setSensor(key, 'searching'), delay));
+  sensorTimers.push(setTimeout(() => setSensor(key, 'connecting'), delay + 850));
+  sensorTimers.push(setTimeout(() => setSensor(key, 'connected'), delay + 1650));
+}
+function runAutoConnect(){
+  sensorTimers.forEach(clearTimeout); sensorTimers = [];
+  state.sensorState = { power: 'idle', cadence: 'idle', hr: 'idle' };
+  ['power', 'cadence', 'hr'].forEach((k, i) => connectSensor(k, 350 + i * 650));
+  commit();
+}
+function toggleSensor(key){
+  const cur = state.sensorState[key];
+  if (cur === 'connected' || cur === 'connecting' || cur === 'searching')
+    state.sensorState = { ...state.sensorState, [key]: 'idle' };
+  else connectSensor(key, 0);
+  commit();
+}
+
+/* ============================================================
+   Event delegation (replaces onClick="{{ handler }}")
+   ============================================================ */
+function handle(act, arg){
+  switch (act) {
+    case 'toggleMenu': state.menuOpen = !state.menuOpen; paintNav(); break;
+    case 'closeMenu': state.menuOpen = false; paintNav(); break;
+    case 'runAutoConnect': runAutoConnect(); break;
+    case 'toggleAuto': state.autoConnect = !state.autoConnect; commit(); break;
+    case 'toggleSensor': toggleSensor(arg); break;
+    case 'goSelect':
+      if (Object.values(state.sensorState).filter(x => x === 'connected').length === 3) state.flowStep = 'select';
+      commit(); break;
+    case 'backToSensors': state.flowStep = 'sensors'; commit(); break;
+    case 'startRiding': state.flowStep = 'riding'; commit(); break;
+    case 'endRiding': state.flowStep = 'select'; commit(); break;
+    case 'pick': state.selectedScreen = arg; commit(); break;
+    case 'setTabTrend': state.perfTab = '훈련트렌드'; commit(); break;
+    case 'setTabZone': state.perfTab = '훈련영역분석'; commit(); break;
+    case 'setTabPower': state.perfTab = '파워프로필'; commit(); break;
+    case 'toggleUnit': state.unitWkg = !state.unitWkg; commit(); break;
+  }
+}
+
+/* ============================================================
+   Simulation loop (port of DCLogic.componentDidMount, 120ms)
+   ============================================================ */
+function tick(){
+  const s = state;
+  let target = s.target;
+  if (Math.random() < 0.12) target = 12 + Math.random() * 32;
+  let speed = s.speed + (target - s.speed) * 0.16 + (Math.random() - 0.5) * 2.4;
+  if (speed < 0) speed = 0; if (speed > 62) speed = 62;
+  const grade = Math.max(-9, Math.min(13, s.grade + (Math.random() - 0.5) * 2.2));
+  let power = Math.max(0, Math.min(720, 90 + speed * 5.4 + grade * 9 + (Math.random() - 0.5) * 70));
+  const cadence = speed > 3 ? Math.max(50, Math.min(112, Math.round(72 + (speed - 26) * 0.7 + (Math.random() - 0.5) * 8))) : 0;
+  const hr = Math.max(95, Math.min(186, s.hr + ((108 + power * 0.13) - s.hr) * 0.05 + (Math.random() - 0.5) * 1.2));
+  const dtSim = 2;
+  const dAlt = (grade / 100) * (speed * dtSim / 3.6);
+  const n = s.n + 1;
+  let lapIdx = s.lapIdx, lapSecs = s.lapSecs + dtSim, lapSumPower = s.lapSumPower + power, lapN = s.lapN + 1;
+  let lapDist = s.lapDist + speed * (dtSim / 3600), lastLapSecs = s.lastLapSecs, lastLapAvg = s.lastLapAvg;
+  if (lapDist >= 5) { lastLapSecs = lapSecs; lastLapAvg = lapSumPower / lapN; lapIdx += 1; lapSecs = 0; lapSumPower = 0; lapN = 0; lapDist = 0; }
+  let distToTop = s.distToTop - speed * dtSim / 3.6, climbGrade = Math.max(3.5, Math.min(12, s.climbGrade + (Math.random() - 0.5) * 0.8)), climbTotal = s.climbTotal;
+  if (distToTop <= 0) { climbTotal = 1400 + Math.round(Math.random() * 2400); distToTop = climbTotal; climbGrade = 5 + Math.random() * 5; }
+  let wkRemain = s.wkRemain - dtSim, wkStepIdx = s.wkStepIdx, wkLo = s.wkLo, wkHi = s.wkHi;
+  if (wkRemain <= 0) { wkStepIdx = wkStepIdx >= 6 ? 1 : wkStepIdx + 1; wkRemain = 240; wkLo = 220 + Math.round(Math.random() * 4) * 15; wkHi = wkLo + 25; }
+  Object.assign(s, {
+    speed, power: Math.round(power), cadence, hr, grade,
+    alt: s.alt + dAlt, ascent: s.ascent + (dAlt > 0 ? dAlt : 0), target,
+    dist: s.dist + speed * (dtSim / 3600), secs: s.secs + dtSim,
+    maxSpeed: Math.max(s.maxSpeed, speed), maxPower: Math.max(s.maxPower, Math.round(power)),
+    avgPowerV: s.avgPowerV + (power - s.avgPowerV) / n,
+    avgHrV: s.avgHrV + (hr - s.avgHrV) / n, n,
+    histPower: s.histPower.slice(-47).concat(power),
+    histHr: s.histHr.slice(-47).concat(hr),
+    lapIdx, lapSecs, lapSumPower, lapN, lapDist, lastLapSecs, lastLapAvg,
+    distToTop, climbGrade, climbTotal, wkRemain, wkStepIdx, wkLo, wkHi,
+  });
+  paintDynamic(computeVals());
+}
+
+/* ============================================================
+   Init
+   ============================================================ */
+const app = document.getElementById('app');
+app.innerHTML = buildPage(computeVals());
+app.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  handle(el.dataset.act, el.dataset.arg);
+});
+// keep the live showcase from fighting the user's swipe
+const sgEl = document.getElementById('showcase-grid');
+if (sgEl) {
+  sgEl.addEventListener('pointerdown', pauseShowcase);
+  sgEl.addEventListener('pointerup', resumeShowcaseSoon);
+  sgEl.addEventListener('pointercancel', resumeShowcaseSoon);
+  sgEl.addEventListener('wheel', () => { pauseShowcase(); resumeShowcaseSoon(); }, { passive: true });
+}
+setInterval(tick, 120);
+setTimeout(() => { if (state.autoConnect) runAutoConnect(); }, 1000);
+
+/* ===================== cycleAPP: real ride stats from the API (Supabase) =====================
+   Pulls aggregate totals from the backend (/api/stats) and shows them under the hero.
+   Silently does nothing when the page is opened as a static file (no server / no rides),
+   so the marketing demo above still works unchanged. */
+(function(){
+  const cell = (l,v)=>`<div class="lv"><span class="l">${l}</span><span class="v">${v}</span></div>`;
+  const sub  = t=>`<span style="font-size:.5em;font-weight:600;">${t}</span>`;
+  function fmtDur(secs){ secs=Math.max(0,Math.floor(secs||0)); const h=Math.floor(secs/3600), m=Math.floor((secs%3600)/60); return h>0?`${h}${sub('시간')} ${m}`:`${m}${sub('분')}`; }
+  function paint(s){
+    const html = `<div class="wrap">
+      <div style="display:flex;align-items:center;gap:8px;padding-top:18px;">
+        <span class="dot"></span>
+        <span style="font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--accent);">내 라이딩 기록 · DB 연동</span>
+      </div>
+      <div class="livebar-grid" style="padding-top:12px;">
+        ${cell('총 라이딩', s.totalRides+sub('회'))}
+        ${cell('총 거리 · KM', (s.totalKm||0).toFixed(1))}
+        ${cell('총 시간', fmtDur(s.totalSecs))}
+        ${cell('누적 상승 · M', Math.round(s.totalAscent||0))}
+        ${cell('평균 파워 · W', s.avgPower||0)}
+        ${cell('최고 속도 · KM/H', (s.maxSpeed||0).toFixed(1))}
+      </div></div>`;
+    let strip=document.getElementById('cycle-stats');
+    if(!strip){
+      strip=document.createElement('div'); strip.className='livebar'; strip.id='cycle-stats';
+      const lb=document.querySelector('.livebar'), nav=document.getElementById('nav-bar');
+      if(lb&&lb.parentNode) lb.parentNode.insertBefore(strip, lb.nextSibling);
+      else if(nav&&nav.parentNode) nav.parentNode.insertBefore(strip, nav.nextSibling);
+      else document.getElementById('app').prepend(strip);
+    }
+    strip.innerHTML=html;
+  }
+  // token (if any) from URL (#token=/?token=) or localStorage — same key the app uses.
+  // The landing stays public: with no/invalid token the API returns 401 and the
+  // strip simply stays hidden, so personal totals aren't exposed to visitors.
+  function apiToken(){
+    try{
+      const m=(location.hash+location.search).match(/[#?&]token=([^&]+)/);
+      if(m){ const t=decodeURIComponent(m[1]); localStorage.setItem('cycleapp.apiToken',t); history.replaceState(null,'',location.pathname); return t; }
+      return localStorage.getItem('cycleapp.apiToken')||'';
+    }catch(e){ return ''; }
+  }
+  async function load(){
+    let s;
+    const tok=apiToken();
+    try{
+      const r=await fetch('/api/stats',{cache:'no-store', headers: tok?{'Authorization':'Bearer '+tok}:undefined});
+      if(!r.ok) return;                         // 401 (no/invalid token) or no server → leave demo page as-is
+      s=await r.json();
+    }catch(e){ return; }
+    if(!s || !s.totalRides){ const ex=document.getElementById('cycle-stats'); if(ex) ex.remove(); return; }
+    paint(s);
+  }
+  load();
+})();
+</script>
+</body>
+</html>
